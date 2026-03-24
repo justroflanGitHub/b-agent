@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  browser-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: nettyan-browser-agent
+    environment:
+      - BROWSER_HEADLESS=true
+      - BROWSER_AGENT_DEBUG=false
+      - BROWSER_AGENT_MOCK_ACTIONS=false
+      - LM_STUDIO_URL=http://host.docker.internal:1234
+      - UI_MODEL=ui-tars-1.5-7b
+      - SEARCH_QUERY=${SEARCH_QUERY:-}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8080:8080"
+    # Connect to host LM Studio
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # network_mode: host  # Commented out - using port mapping instead for Windows compatibility
+    # For interactive mode (if supported by your Docker setup)
+    stdin_open: true
+    tty: true
+    # Default to API mode via CMD in Dockerfile
+
+networks:
+  default:
+    name: nettyan-network
