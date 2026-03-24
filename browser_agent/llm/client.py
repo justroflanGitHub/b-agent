@@ -498,9 +498,8 @@ CRITICAL COORDINATE RULES:
 
 IMPORTANT FOR GOOGLE.COM:
 - The search bar is in the UPPER THIRD of the screen
-- For a {viewport_height}px tall screen, the search bar is at Y: 380-420
 - The search bar is CENTERED horizontally around X: {viewport_width // 2}
-- DO NOT click at y=700-800, that is too low!
+- Google.com search field coordinates: x=1280, y=400
 
 Return JSON with the center coordinates:
 {{
