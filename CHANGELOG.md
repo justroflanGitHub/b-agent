@@ -19,6 +19,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-03-24
+
+### Added - Phase 2: Visual Intelligence (Major Feature)
+
+#### Visual Analyzer Module (`browser_agent/vision/`)
+- **[0.4.0.1]** BoundingBox dataclass with geometric operations
+  - `center` property for center coordinates
+  - `area` property for bounding box area
+  - `contains(x, y)` method for point containment
+  - `overlaps(other)` method for overlap detection
+  - `to_dict()` serialization method
+
+- **[0.4.0.2]** ElementInfo dataclass for detected elements
+  - Bounding box, element type, description
+  - Visibility and interactivity flags
+  - Clickable/typeable attributes
+  - Confidence scoring
+
+- **[0.4.0.3]** PageState enum for page classification
+  - LOADING, READY, ERROR, MODAL
+  - LOGIN_REQUIRED, CAPTCHA, RATE_LIMITED
+  - NOT_FOUND, REDIRECTING
+
+- **[0.4.0.4]** ElementType enum for element classification
+  - Input types: INPUT_TEXT, INPUT_PASSWORD, INPUT_EMAIL, INPUT_SEARCH
+  - Interactive: BUTTON, LINK, CHECKBOX, RADIO, SELECT
+  - Content: TEXT, HEADING, PARAGRAPH, IMAGE
+  - Structural: FORM, NAVIGATION, HEADER, FOOTER, SIDEBAR
+  - Overlay: MODAL, POPUP, ADVERTISEMENT
+
+- **[0.4.0.5]** VisualAnalyzer class
+  - `analyze_page()` - Complete page analysis
+  - `_analyze_page_state()` - Page state determination
+  - `_detect_elements()` - Multi-element detection
+  - `_generate_summary()` - Page summary generation
+  - `_generate_recommendations()` - Action recommendations
+  - `find_element()` - Find specific element by description
+  - `find_all_elements()` - Find all matching elements
+  - Built-in result caching with configurable TTL
+
+#### Visual Diff Module (`browser_agent/vision/diff.py`)
+- **[0.4.0.6]** VisualDiff class for screenshot comparison
+  - Pixel-wise comparison (with PIL)
+  - Hash-based comparison (fallback without PIL)
+  - Change region detection
+  - Similarity scoring
+  - Diff image generation with red highlighting
+  - `quick_compare()` for fast similarity check
+  - `get_similarity_score()` for 0.0-1.0 score
+
+#### Vision Cache Module (`browser_agent/vision/cache.py`)
+- **[0.4.0.7]** VisionCache class for result caching
+  - LRU cache with configurable max size
+  - TTL-based expiration
+  - Screenshot hash-based lookup
+  - `get_or_compute()` for automatic caching
+  - `async_get_or_compute()` for async operations
+  - Cache statistics (hits, misses, hit rate)
+  - Invalidation by screenshot or operation
+
+#### Visual Actions (`browser_agent/actor/actions.py`)
+- **[0.4.0.8]** New visual action types
+  - `ActionType.HOVER_VISUAL` - Hover by visual description
+  - `ActionType.TYPE_VISUAL` - Click and type by visual description
+
+- **[0.4.0.9]** Visual action handlers
+  - `_hover_visual()` - Uses vision client to find coordinates
+  - `_type_visual()` - Clicks on input and types text
+
+#### Tests (`tests/test_vision.py`)
+- **[0.4.0.10]** Comprehensive test suite for Phase 2 (36 tests)
+  - BoundingBox tests (6 tests)
+  - ElementInfo tests (2 tests)
+  - PageState/ElementType tests (2 tests)
+  - VisualAnalyzer tests (9 tests)
+  - VisualDiff tests (4 tests)
+  - VisionCache tests (10 tests)
+  - Visual action types tests (2 tests)
+  - Integration tests (2 tests)
+
+### Changed
+- **[0.4.0.11]** Total tests: 142 passed, 14 skipped (was 107 passed)
+- **[0.4.0.12]** Updated requirements.txt with optional PIL dependency
+
+---
+
 ## [0.3.0] - 2026-03-22
 
 ### Added - Step Validation System (Major Feature)

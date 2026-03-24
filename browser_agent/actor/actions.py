@@ -37,6 +37,10 @@ class ActionType(Enum):
     HOVER = "hover"
     DRAG_AND_DROP = "drag_and_drop"
     
+    # Visual Mouse (Phase 2)
+    HOVER_VISUAL = "hover_visual"
+    TYPE_VISUAL = "type_visual"
+    
     # Input
     TYPE_TEXT = "type_text"
     CLEAR_INPUT = "clear_input"
@@ -135,6 +139,8 @@ class ActionExecutor:
             ActionType.RIGHT_CLICK: self._right_click,
             ActionType.HOVER: self._hover,
             ActionType.DRAG_AND_DROP: self._drag_and_drop,
+            ActionType.HOVER_VISUAL: self._hover_visual,
+            ActionType.TYPE_VISUAL: self._type_visual,
             ActionType.TYPE_TEXT: self._type_text,
             ActionType.CLEAR_INPUT: self._clear_input,
             ActionType.SELECT_OPTION: self._select_option,
@@ -482,6 +488,193 @@ class ActionExecutor:
         
         await source_el.drag_and_drop(target_el)
         return ActionResult(success=True, action_type=ActionType.DRAG_AND_DROP)
+    
+    # ==================== Visual Actions (Phase 2) ====================
+    
+    async def _hover_visual(
+        self,
+        ctx: ActionContext,
+        target: Optional[str],
+        value: Any,
+        options: Dict
+    ) -> ActionResult:
+        """
+        Hover over element by visual description.
+        
+        Uses vision model to find element coordinates from description.
+        
+        Args:
+            target: Visual description of element to hover
+            value: Alternative to target
+            options: May contain 'screenshot' for vision analysis
+        """
+        description = target or value
+        if not description:
+            return ActionResult(
+                success=False,
+                action_type=ActionType.HOVER_VISUAL,
+                error="No visual description provided"
+            )
+        
+        # Check if we have vision client
+        if not self.vision_client:
+            return ActionResult(
+                success=False,
+                action_type=ActionType.HOVER_VISUAL,
+                error="Vision client not available for visual hover"
+            )
+        
+        # Get screenshot from context or take new one
+        screenshot = ctx.screenshot or options.get("screenshot")
+        if not screenshot:
+            screenshot = await ctx.page.screenshot()
+        
+        try:
+            # Use vision client to get coordinates
+            coords = await self.vision_client.get_click_coordinates(
+                screenshot=screenshot,
+                element_description=description,
+                viewport_width=ctx.page.viewport_size.get("width", 2560),
+                viewport_height=ctx.page.viewport_size.get("height", 1440)
+            )
+            
+            x = coords.get("x", 0)
+            y = coords.get("y", 0)
+            confidence = coords.get("confidence", 0)
+            
+            if confidence < 0.5 or not coords.get("element_found", False):
+                return ActionResult(
+                    success=False,
+                    action_type=ActionType.HOVER_VISUAL,
+                    error=f"Could not locate element: {description}",
+                    data={"confidence": confidence}
+                )
+            
+            logger.info(f"🖱️ Visual hover on '{description}' at ({x}, {y}) confidence={confidence:.2f}")
+            
+            # Perform hover
+            await ctx.page.mouse.move(x, y)
+            
+            return ActionResult(
+                success=True,
+                action_type=ActionType.HOVER_VISUAL,
+                data={"x": x, "y": y, "description": description, "confidence": confidence}
+            )
+            
+        except Exception as e:
+            logger.error(f"Visual hover failed: {e}")
+            return ActionResult(
+                success=False,
+                action_type=ActionType.HOVER_VISUAL,
+                error=str(e)
+            )
+    
+    async def _type_visual(
+        self,
+        ctx: ActionContext,
+        target: Optional[str],
+        value: Any,
+        options: Dict
+    ) -> ActionResult:
+        """
+        Click on element by visual description and type text.
+        
+        Combines visual click with typing in one action.
+        
+        Args:
+            target: Visual description of input element
+            value: Text to type
+            options: May contain 'screenshot', 'clear' (bool), 'delay' (int)
+        """
+        description = target
+        text = str(value) if value else ""
+        
+        if not description:
+            return ActionResult(
+                success=False,
+                action_type=ActionType.TYPE_VISUAL,
+                error="No visual description provided"
+            )
+        
+        if not text:
+            return ActionResult(
+                success=False,
+                action_type=ActionType.TYPE_VISUAL,
+                error="No text provided to type"
+            )
+        
+        # Check if we have vision client
+        if not self.vision_client:
+            return ActionResult(
+                success=False,
+                action_type=ActionType.TYPE_VISUAL,
+                error="Vision client not available for visual typing"
+            )
+        
+        # Get screenshot from context or take new one
+        screenshot = ctx.screenshot or options.get("screenshot")
+        if not screenshot:
+            screenshot = await ctx.page.screenshot()
+        
+        try:
+            # Use vision client to get coordinates
+            coords = await self.vision_client.get_click_coordinates(
+                screenshot=screenshot,
+                element_description=description,
+                viewport_width=ctx.page.viewport_size.get("width", 2560),
+                viewport_height=ctx.page.viewport_size.get("height", 1440)
+            )
+            
+            x = coords.get("x", 0)
+            y = coords.get("y", 0)
+            confidence = coords.get("confidence", 0)
+            
+            if confidence < 0.5 or not coords.get("element_found", False):
+                return ActionResult(
+                    success=False,
+                    action_type=ActionType.TYPE_VISUAL,
+                    error=f"Could not locate element: {description}",
+                    data={"confidence": confidence}
+                )
+            
+            logger.info(f"🖱️ Visual click on '{description}' at ({x}, {y}) for typing")
+            
+            # Click to focus
+            await ctx.page.mouse.click(x, y)
+            
+            # Small delay for focus
+            await asyncio.sleep(0.1)
+            
+            # Clear if requested
+            if options.get("clear", False):
+                await ctx.page.keyboard.press("Control+A")
+                await asyncio.sleep(0.05)
+            
+            # Type text
+            delay = options.get("delay", self.config.action.typing_delay)
+            await ctx.page.keyboard.type(text, delay=delay)
+            
+            logger.info(f"⌨️ Typed '{text}' into '{description}'")
+            
+            return ActionResult(
+                success=True,
+                action_type=ActionType.TYPE_VISUAL,
+                data={
+                    "x": x,
+                    "y": y,
+                    "text": text,
+                    "description": description,
+                    "confidence": confidence
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Visual type failed: {e}")
+            return ActionResult(
+                success=False,
+                action_type=ActionType.TYPE_VISUAL,
+                error=str(e)
+            )
     
     # ==================== Input Actions ====================
     
