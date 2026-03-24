@@ -92,6 +92,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Total attempts now limited by `max_consecutive_failures=3` only
   - Updated log messages to show consecutive failure count
 
+### Refactored - Tool-Calling Architecture (v0.3.8)
+- **[0.3.8.1]** Removed `_click_visual()` and `_type_visual()` from actions.py
+  - These methods had duplicate coordinate logic
+  - Coordinate calculation moved to dedicated tool
+- **[0.3.8.2]** Added `VisionClient.get_click_coordinates()` tool
+  - Dedicated prompt for precise coordinate detection
+  - Separate from main action planning prompt
+  - Returns x, y, confidence, element_found
+- **[0.3.8.3]** Updated agent.py to use coordinate tool
+  - Calls `vision_client.get_click_coordinates()` for click actions
+  - Falls back to original coordinates if confidence < 0.5
+  - Logs final click coordinates with confidence
+
 ### Fixed - Action Transition (v0.3.7)
 - **[0.3.7.1]** Programmatic action transition enforcement
   - If vision model returns same action type after success, force transition

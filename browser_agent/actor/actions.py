@@ -64,9 +64,6 @@ class ActionType(Enum):
     HANDLE_DIALOG = "handle_dialog"
     PRESS_KEY = "press_key"
     
-    # Vision-guided
-    CLICK_VISUAL = "click_visual"
-    TYPE_VISUAL = "type_visual"
 
 
 @dataclass
@@ -156,8 +153,6 @@ class ActionExecutor:
             ActionType.WAIT_FOR_NAVIGATION: self._wait_for_navigation,
             ActionType.PRESS_KEY: self._press_key,
             ActionType.HANDLE_DIALOG: self._handle_dialog,
-            ActionType.CLICK_VISUAL: self._click_visual,
-            ActionType.TYPE_VISUAL: self._type_visual,
         }
     
     async def execute(
@@ -916,135 +911,6 @@ class ActionExecutor:
         
         ctx.page.on("dialog", dialog_handler)
         return ActionResult(success=True, action_type=ActionType.HANDLE_DIALOG)
-    
-    # ==================== Vision-Guided Actions ====================
-    
-    async def _click_visual(
-        self,
-        ctx: ActionContext,
-        target: Optional[str],
-        value: Any,
-        options: Dict
-    ) -> ActionResult:
-        """Click based on visual description."""
-        if not ctx.vision_client:
-            return ActionResult(
-                success=False,
-                action_type=ActionType.CLICK_VISUAL,
-                error="No vision client available"
-            )
-        
-        description = target or value
-        if not description:
-            return ActionResult(
-                success=False,
-                action_type=ActionType.CLICK_VISUAL,
-                error="No description provided"
-            )
-        
-        # Take screenshot if not provided
-        screenshot = ctx.screenshot or await ctx.page.screenshot(type="png")
-        
-        # Get viewport dimensions for accurate coordinate mapping
-        viewport = ctx.page.viewport_size or {"width": 2560, "height": 1440}
-        
-        # Get click coordinates from vision model
-        prompt = f"""You are a precise UI automation assistant. Analyze this screenshot and find the element described as: "{description}"
-
-IMPORTANT LAYOUT CONTEXT FOR GOOGLE.COM:
-- On Google.com default page, the search bar is CENTERED HORIZONTALLY but NOT VERTICALLY
-- For a {viewport['width']}x{viewport['height']} screen, the Google search bar is approximately:
-- The search bar is a rounded rectangular input field
-- DO NOT click on the top navigation bar - the search input is in the MAIN CONTENT area
- 
-CRITICAL: Use real coordinates you observe in the screenshot.
-- Look for the actual search box position
-
-Google.com search field coordinates: x=1280, y=400
-
-screenshot dimensions: {viewport['width']}x{viewport['height']}
-
-output format:
-{{
-  "click_target": {{
-    "x": xxx,
-    "y": yyy,
-    "confidence": "0.0-1.0"
-  }}
-}}
-
-
-Screenshot dimensions: {viewport['width']}x{viewport['height']}
-"""
-        
-        from ..llm.client import ChatMessage, MessageRole
-        response = await ctx.vision_client.chat_with_image(prompt, screenshot)
-        
-        # Parse coordinates
-        import json
-        try:
-            content = response.content
-            json_start = content.find("{")
-            json_end = content.rfind("}") + 1
-            if json_start >= 0 and json_end > json_start:
-                coords = json.loads(content[json_start:json_end])
-                x = coords.get("x", 0)
-                y = coords.get("y", 0)
-                
-                # Add human-like offset
-                x += random.randint(-3, 3)
-                y += random.randint(-3, 3)
-                
-                logger.info(f"🖱️ Visual click at coordinates: ({x}, {y}) for '{description}'")
-                await ctx.page.mouse.click(x, y)
-                # y - 92
-                return ActionResult(
-                    success=True,
-                    action_type=ActionType.CLICK_VISUAL,
-                    data={"x": x, "y": y, "description": description}
-                )
-        except (json.JSONDecodeError, KeyError) as e:
-            pass
-        # y - 92
-        return ActionResult(
-            success=False,
-            action_type=ActionType.CLICK_VISUAL,
-            error="Could not parse coordinates from vision response"
-        )
-    
-    async def _type_visual(
-        self,
-        ctx: ActionContext,
-        target: Optional[str],
-        value: Any,
-        options: Dict
-    ) -> ActionResult:
-        """Click on visual element and type text."""
-        # First click on the visual target
-        click_result = await self._click_visual(ctx, target, None, options)
-        
-        if not click_result.success:
-            return click_result
-        
-        # Wait briefly for focus
-        await asyncio.sleep(0.2)
-        
-        # Type the text
-        text = value
-        if not text:
-            return ActionResult(
-                success=False,
-                action_type=ActionType.TYPE_VISUAL,
-                error="No text provided to type"
-            )
-        
-        await ctx.page.keyboard.type(str(text), delay=self.config.action.typing_delay)
-        
-        return ActionResult(
-            success=True,
-            action_type=ActionType.TYPE_VISUAL,
-            data={"text": text, "click_data": click_result.data}
-        )
     
     # ==================== Utility Methods ====================
     

@@ -462,6 +462,71 @@ Screenshot dimensions: 2560x1440
             pass
         
         return {"action": None, "raw_response": response.content}
+    
+    async def get_click_coordinates(
+        self,
+        screenshot: bytes,
+        element_description: str,
+        viewport_width: int = 2560,
+        viewport_height: int = 1440,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Get precise click coordinates for an element using tool-calling.
+        
+        This is a dedicated tool for coordinate calculation, separate from
+        the main action planning prompt.
+        
+        Args:
+            screenshot: PNG screenshot bytes
+            element_description: Description of element to click
+            viewport_width: Screenshot width in pixels
+            viewport_height: Screenshot height in pixels
+            
+        Returns:
+            Dict with x, y coordinates and confidence
+        """
+        prompt = f"""You are a precise coordinate detection tool. Analyze the screenshot and find the exact center coordinates for: "{element_description}"
+
+SCREENSHOT DIMENSIONS: {viewport_width}x{viewport_height} (width x height)
+
+CRITICAL COORDINATE RULES:
+1. Look at the screenshot CAREFULLY and identify the EXACT pixel coordinates
+2. Coordinates must be within the screenshot bounds:
+   - X: 0 to {viewport_width}
+   - Y: 0 to {viewport_height}
+
+IMPORTANT FOR GOOGLE.COM:
+- The search bar is in the UPPER THIRD of the screen
+- For a {viewport_height}px tall screen, the search bar is at Y: 380-420
+- The search bar is CENTERED horizontally around X: {viewport_width // 2}
+- DO NOT click at y=700-800, that is too low!
+
+Return JSON with the center coordinates:
+{{
+    "x": <integer x coordinate>,
+    "y": <integer y coordinate>,
+    "confidence": <float 0.0-1.0>,
+    "element_found": <boolean>,
+    "notes": "<optional notes about the element>"
+}}
+"""
+        
+        response = await self.chat_with_image(prompt, screenshot, **kwargs)
+        
+        # Parse JSON from response
+        try:
+            content = response.content
+            json_start = content.find("{")
+            json_end = content.rfind("}") + 1
+            if json_start >= 0 and json_end > json_start:
+                result = json.loads(content[json_start:json_end])
+                logger.info(f"🎯 Coordinate tool: ({result.get('x')}, {result.get('y')}) confidence={result.get('confidence', 0)}")
+                return result
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse coordinate response: {e}")
+        
+        return {"x": 0, "y": 0, "confidence": 0, "element_found": False, "error": "Failed to parse response"}
 
 
 # Convenience functions

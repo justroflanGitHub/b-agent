@@ -387,7 +387,21 @@ class TestVisionGuidedExecution:
             action_type=ActionType.CLICK
         )
         
-        action = {"type": "click", "x": 100, "y": 200}
+        # Mock browser page for viewport
+        agent.browser = MagicMock()
+        agent.browser.page = MagicMock()
+        agent.browser.page.evaluate = AsyncMock(return_value={"width": 2560, "height": 1440})
+        
+        # Mock vision client coordinate tool
+        agent.vision_client = MagicMock()
+        agent.vision_client.get_click_coordinates = AsyncMock(return_value={
+            "x": 100,
+            "y": 200,
+            "confidence": 0.9,
+            "element_found": True
+        })
+        
+        action = {"type": "click", "x": 100, "y": 200, "description": "test element"}
         result = await agent._execute_vision_action(action, b"screenshot")
         
         assert result.success == True

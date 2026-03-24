@@ -823,8 +823,28 @@ For "{goal}" on Google:
         action_type = action.get("type")
         
         if action_type == "click":
-            x = action.get("x", 0)
-            y = action.get("y", 0)
+            # Use the coordinate tool to get precise coordinates
+            element_description = action.get("description", "click target")
+            viewport = await self.browser.page.evaluate("({width: window.innerWidth, height: window.innerHeight})")
+            
+            coords = await self.vision_client.get_click_coordinates(
+                screenshot=screenshot,
+                element_description=element_description,
+                viewport_width=viewport.get("width", 2560),
+                viewport_height=viewport.get("height", 1440)
+            )
+            
+            x = coords.get("x", 0)
+            y = coords.get("y", 0)
+            confidence = coords.get("confidence", 0)
+            
+            if confidence < 0.5 or not coords.get("element_found", False):
+                # Fallback to original coordinates from main prompt
+                x = action.get("x", x)
+                y = action.get("y", y)
+                logger.warning(f"⚠️ Coordinate tool low confidence ({confidence}), using fallback: ({x}, {y})")
+            
+            logger.info(f"🎯 Final click coordinates: ({x}, {y}) for '{element_description}'")
             return await self.action_executor.execute(
                 ActionType.CLICK,
                 target=(x, y),

@@ -76,10 +76,7 @@ class TestActionType:
         assert ActionType.PRESS_KEY.value == "press_key"
         assert ActionType.HANDLE_DIALOG.value == "handle_dialog"
     
-    def test_visual_actions(self):
-        """Test visual action types exist."""
-        assert ActionType.CLICK_VISUAL.value == "click_visual"
-        assert ActionType.TYPE_VISUAL.value == "type_visual"
+    # Visual actions removed - coordinate calculation moved to VisionClient.get_click_coordinates()
     
     def test_all_actions_have_values(self):
         """Test all action types have string values."""
