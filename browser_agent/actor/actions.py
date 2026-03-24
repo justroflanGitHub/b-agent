@@ -960,9 +960,7 @@ IMPORTANT LAYOUT CONTEXT FOR GOOGLE.COM:
 CRITICAL: Use real coordinates you observe in the screenshot.
 - Look for the actual search box position
 
-Return the exact coordinates to click as JSON:
-{{"x": coordinate_x, "y": coordinate_y, "confidence": 0.0-1.0}}
-
+Google.com search field coordinates: x=1280, y=400
 
 screenshot dimensions: {viewport['width']}x{viewport['height']}
 

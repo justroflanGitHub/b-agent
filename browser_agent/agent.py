@@ -200,7 +200,7 @@ class BrowserAgent:
         last_actions = []  # Track last few actions for context
         consecutive_failures = 0
         max_consecutive_failures = 3
-        max_action_retries = 3  # Max retries per action
+        max_action_retries = 1  # No per-action retry, just move to next step
         
         for step_num in range(max_steps):
             try:
@@ -246,15 +246,7 @@ class BrowserAgent:
                 last_validation = None
                 
                 for retry in range(max_action_retries):
-                    # Take fresh screenshot for each retry
-                    if retry > 0:
-                        logger.info(f"🔄 Retrying action '{action_type}' (attempt {retry + 1}/{max_action_retries})")
-                        screenshot = await self.browser.screenshot()
-                        # Get new action from vision model for retry
-                        action = await self._get_next_action(goal, screenshot, step_num, last_actions)
-                        if not action:
-                            continue
-                        action_type = action.get("type")
+                    # Note: max_action_retries=1 means no retry, just single attempt
                     
                     # Execute the action
                     result = await self._execute_vision_action(action, screenshot)
@@ -285,7 +277,7 @@ class BrowserAgent:
                 # Update result based on final validation
                 if not action_success:
                     consecutive_failures += 1
-                    logger.error(f"❌ Action '{action_type}' failed after {max_action_retries} attempts")
+                    logger.error(f"❌ Action '{action_type}' failed (consecutive failures: {consecutive_failures}/{max_consecutive_failures})")
                 
                 # Track last actions for context
                 last_actions.append({

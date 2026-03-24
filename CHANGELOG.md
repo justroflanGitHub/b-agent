@@ -85,6 +85,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added visual reference: search bar is below Google logo, ~1/3 from top
   - Added specific example: x=1280, y=400 for 2560x1440 screen
 
+### Fixed - Retry Logic (v0.3.6)
+- **[0.3.6.1]** Removed per-action retry to prevent excessive attempts
+  - Changed `max_action_retries` from 3 to 1
+  - Each action now gets one attempt, then moves to next step
+  - Total attempts now limited by `max_consecutive_failures=3` only
+  - Updated log messages to show consecutive failure count
+
 ---
 
 ## [0.2.10] - 2026-03-21
