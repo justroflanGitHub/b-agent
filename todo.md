@@ -111,12 +111,13 @@
 ## Phase 2: Visual Intelligence (Week 3-4)
 
 ### 2.1 UI-TARS Integration
-- [~] UI-TARS 1.5 vision model integration
+- [x] UI-TARS 1.5 vision model integration
 - [x] Screenshot analysis for action prediction
 - [x] Element detection via natural language queries
+- [x] Coordinate extraction via tool-calling (VisionClient.get_click_coordinates)
+- [x] Confidence scoring for detections
 - [ ] Bounding box coordinate extraction
 - [ ] Element type classification
-- [ ] Confidence scoring for detections
 - [ ] Multi-element detection in single query
 
 ### 2.2 Screenshot Analyzer Agent
@@ -131,8 +132,8 @@
 - [ ] Analysis result caching
 
 ### 2.3 Visual Actor Enhancement
-- [~] Visual element targeting via coordinates
-- [x] Click by visual description
+- [x] Visual element targeting via coordinates (tool-calling architecture)
+- [x] Click by visual description (via VisionClient.get_click_coordinates)
 - [ ] Hover by visual description
 - [ ] Type by visual description
 - [ ] Fuzzy element matching
@@ -358,9 +359,11 @@
 ## Testing & Quality
 
 ### Unit Tests
-- [ ] Browser controller tests
-- [ ] Action executor tests
-- [ ] Vision client tests
+- [x] Browser controller tests (20 tests)
+- [x] Action executor tests (36 tests)
+- [x] Vision client tests (22 tests)
+- [x] Config tests (19 tests)
+- [x] Agent tests (15 tests)
 - [ ] Checkpoint manager tests
 - [ ] Fallback strategy tests
 - [ ] Skill tests
@@ -373,8 +376,8 @@
 
 ### Test Infrastructure
 - [x] Basic test script (test_browser_visible.py)
-- [ ] Test fixtures
-- [ ] Mock browser for testing
+- [x] Test fixtures (pytest fixtures with AsyncMock)
+- [x] Mock browser for testing (MagicMock + AsyncMock)
 - [ ] CI/CD integration
 
 ---
@@ -396,13 +399,24 @@
 | Category | Completed | Partial | Pending | Total |
 |----------|-----------|---------|---------|-------|
 | Phase 1: Core Foundation | 52 | 2 | 9 | 63 |
-| Phase 2: Visual Intelligence | 6 | 2 | 20 | 28 |
+| Phase 2: Visual Intelligence | 10 | 2 | 16 | 28 |
 | Phase 3: Resilience & Recovery | 1 | 1 | 32 | 34 |
 | Phase 4: Advanced Capabilities | 0 | 0 | 35 | 35 |
 | Phase 5: Production & Polish | 2 | 1 | 30 | 33 |
 | Enhanced Features | 0 | 1 | 19 | 20 |
-| Testing & Quality | 2 | 0 | 14 | 16 |
+| Testing & Quality | 8 | 0 | 8 | 16 |
 | Documentation | 2 | 0 | 5 | 7 |
-| **TOTAL** | **65** | **7** | **164** | **236** |
+| **TOTAL** | **75** | **7** | **154** | **236** |
 
-**Overall Progress: ~30% Complete**
+**Overall Progress: ~35% Complete**
+
+---
+
+## Recent Changes (v0.3.8)
+
+### Tool-Calling Architecture
+- [x] Removed `_click_visual()` and `_type_visual()` from actions.py
+- [x] Added `VisionClient.get_click_coordinates()` as dedicated coordinate tool
+- [x] Updated agent.py to use coordinate tool with confidence fallback
+- [x] Cleaner separation: main prompt decides action, tool calculates coordinates
+- [x] All 106 tests pass
