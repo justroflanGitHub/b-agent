@@ -770,13 +770,8 @@ Screenshot dimensions: 2560x1440 (width x height)
 
 CRITICAL COORDINATE RULES:
 1. Look at the screenshot CAREFULLY and identify the EXACT pixel coordinates of elements
-2. The search/input field is usually in the CENTER of the page horizontally (x around 1280)
-3. IMPORTANT: Google search bar is in the UPPER THIRD of the screen, NOT the middle!
-   - For a 1440px tall screen, the search bar is at Y: 380-420 (NOT 700-800!)
-   - The search bar is ABOVE the vertical center (720px), typically around y=400
-4. DO NOT click at y=700-800 - that is too low, you will miss the search bar
-5. Look for the Google logo - the search bar is directly below it
-6. The search bar is approximately 1/3 down from the top of the screen
+2. The search/input field is usually in the CENTER of the page horizontally 
+3. IMPORTANT: Google search bar is (x=1280, y=400)
 
 CRITICAL ACTION RULES - STRICT SEQUENCE:
 1. NEVER repeat "click" after a successful click - move to NEXT step!
