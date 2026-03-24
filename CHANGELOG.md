@@ -92,6 +92,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Total attempts now limited by `max_consecutive_failures=3` only
   - Updated log messages to show consecutive failure count
 
+### Fixed - Action Transition (v0.3.7)
+- **[0.3.7.1]** Programmatic action transition enforcement
+  - If vision model returns same action type after success, force transition
+  - click → type: Extract search query from goal and auto-set text
+  - Prevents infinite clicking loop
+- **[0.3.7.2]** Improved vision prompt with stricter action rules
+  - Added "STRICT SEQUENCE" and "MANDATORY ACTION TRANSITIONS" sections
+  - Explicit instruction to check recent actions before deciding next action
+
 ---
 
 ## [0.2.10] - 2026-03-21

@@ -220,6 +220,27 @@ class BrowserAgent:
                 
                 action_type = action.get("type")
                 
+                # Prevent repeating the same action after success
+                if last_actions:
+                    last_successful = [a for a in last_actions if a.get("success")]
+                    if last_successful:
+                        last_success_type = last_successful[-1].get("type")
+                        # Enforce action transitions after success
+                        if action_type == last_success_type:
+                            logger.warning(f"⚠️ Vision model returned same action '{action_type}' after success, enforcing transition")
+                            if action_type == "click":
+                                # Force transition to type
+                                action_type = "type"
+                                action["type"] = "type"
+                                # Extract search query from goal
+                                import re
+                                match = re.search(r'[Ss]earch\s+(?:for\s+)?["\']?([^"\']+)["\']?', goal)
+                                if match:
+                                    action["text"] = match.group(1).strip()
+                                else:
+                                    action["text"] = goal
+                                logger.info(f"🔄 Forcing transition: click → type '{action.get('text')}'")
+                
                 # Check for completion
                 if action_type == "complete" or action.get("complete", False):
                     # Validate completion with screenshot
@@ -757,19 +778,26 @@ CRITICAL COORDINATE RULES:
 5. Look for the Google logo - the search bar is directly below it
 6. The search bar is approximately 1/3 down from the top of the screen
 
-CRITICAL ACTION RULES:
-1. DO NOT repeat the same action type multiple times in a row
-2. If previous action was "click" on an input field, NEXT action should be "type"
-3. If previous action was "type", NEXT action should be "press_enter" to submit
-4. If you see a blinking cursor or focused input, use "type" NOT "click"
-5. If you see search results on the page, return "complete"
-6. Extract the actual search query from the task and type it
+CRITICAL ACTION RULES - STRICT SEQUENCE:
+1. NEVER repeat "click" after a successful click - move to NEXT step!
+2. After successful "click" on input field → NEXT action MUST be "type"
+3. After "type" → NEXT action MUST be "press_enter"
+4. After "press_enter" → Check if task is complete
 
-For "Search for Python tutorials" on Google:
-- Step 1: Click on search field (coordinates: x=1280, y=400 - in the UPPER THIRD of screen)
-- Step 2: Type "Python tutorials"
+MANDATORY ACTION TRANSITIONS:
+- click (success) → type (MANDATORY - do not click again!)
+- type → press_enter (MANDATORY)
+- press_enter → complete (if search results appear)
+
+IMPORTANT: Look at recent actions above!
+- If last action was "click" with success=true, you MUST return "type" next
+- If you see "click: success" in recent actions, DO NOT click again - TYPE instead!
+
+For "{goal}" on Google:
+- Step 1: Click on search field (x=1280, y=400)
+- Step 2: Type the search query (extract from task goal)
 - Step 3: Press Enter
-- Step 4: Complete with result "Search performed successfully"
+- Step 4: Complete with result
 """
         
         try:
