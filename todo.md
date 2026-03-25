@@ -371,7 +371,27 @@ Create localhost test pages for each use case to enable automated testing and va
 ### 4.5.7 Test Server Infrastructure
 - [x] `test_pages/server.py` - Simple HTTP server for localhost
 - [x] `test_pages/README.md` - Test pages documentation
-- [ ] Integration with pytest for automated testing
+- [x] Integration with pytest for automated testing
+
+### 4.5.8 Integration Tests for Use Cases
+- [x] `tests/test_integration_use_cases.py` - Basic integration tests:
+  - [x] Form Filling integration tests
+  - [x] Data Extraction integration tests
+  - [x] Web Scraping integration tests
+  - [x] Search & Research integration tests
+  - [x] Workflow Automation integration tests
+  - [x] E-commerce integration tests
+  - [x] Success rate calculation and reporting
+- [x] `tests/test_llm_use_cases.py` - LLM-based integration tests:
+  - [x] LLMAgent class for model-driven browser automation
+  - [x] ActionResult and TaskResult tracking
+  - [x] Success rate percentage calculation
+  - [x] Form Filling LLM tests
+  - [x] Data Extraction LLM tests
+  - [x] Web Scraping LLM tests
+  - [x] Search & Research LLM tests
+  - [x] Workflow Automation LLM tests
+  - [x] E-commerce LLM tests
 
 ---
 

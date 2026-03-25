@@ -19,6 +19,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.1] - 2026-03-26
+
+### Added - Integration Tests for Use Cases
+
+#### Basic Integration Tests (`tests/test_integration_use_cases.py`)
+- **[0.8.1.1]** `TestPageServer` class for managing test HTTP server
+- **[0.8.1.2]** `ActionResult` and `TaskResult` dataclasses for tracking
+- **[0.8.1.3]** `TestFormFillingIntegration` - Form filling tests:
+  - `test_fill_required_fields` - Fill required form fields
+  - `test_validation_errors` - Test validation error handling
+- **[0.8.1.4]** `TestDataExtractionIntegration` - Data extraction tests:
+  - `test_extract_all_products` - Extract all 12 products
+  - `test_extract_products_by_category` - Filter by category
+- **[0.8.1.5]** `TestWebScrapingIntegration` - Web scraping tests:
+  - `test_scrape_with_pagination` - Multi-page scraping
+  - `test_scrape_with_load_more` - Load more functionality
+- **[0.8.1.6]** `TestSearchResearchIntegration` - Search tests:
+  - `test_basic_search` - Search functionality
+  - `test_navigate_to_result` - Click search results
+- **[0.8.1.7]** `TestWorkflowAutomationIntegration` - Workflow tests:
+  - `test_login_workflow` - Complete login flow
+  - `test_invalid_login` - Invalid credential handling
+- **[0.8.1.8]** `TestEcommerceIntegration` - E-commerce tests:
+  - `test_add_to_cart` - Add product to cart
+  - `test_filter_products` - Filter by category
+
+#### LLM-Based Integration Tests (`tests/test_llm_use_cases.py`)
+- **[0.8.1.9]** `LLMAction` dataclass for tracking LLM decisions
+- **[0.8.1.10]** `LLMActionResult` dataclass for execution results
+- **[0.8.1.11]** `UseCaseTestResult` dataclass with success rate calculation
+- **[0.8.1.12]** `LLMAgent` class for model-driven browser automation:
+  - Browser initialization with Playwright
+  - Page state extraction for LLM context
+  - LLM API integration with JSON response parsing
+  - Action execution (click, fill, select, wait)
+  - Multi-step task execution with max steps limit
+- **[0.8.1.13]** `TestFormFillingLLM` - LLM form filling tests
+- **[0.8.1.14]** `TestDataExtractionLLM` - LLM data extraction tests
+- **[0.8.1.15]** `TestWebScrapingLLM` - LLM web scraping tests
+- **[0.8.1.16]** `TestSearchResearchLLM` - LLM search tests
+- **[0.8.1.17]** `TestWorkflowAutomationLLM` - LLM workflow tests
+- **[0.8.1.18]** `TestEcommerceLLM` - LLM e-commerce tests
+- **[0.8.1.19]** `TestSuccessRateReport` - Report generation tests
+
+### Testing Infrastructure
+- **[0.8.1.20]** Custom pytest options:
+  - `--run-integration` flag for basic integration tests
+  - `--run-llm-tests` flag for LLM-based tests
+  - `--llm-endpoint` for API endpoint configuration
+  - `--llm-model` for model selection
+  - `--test-server-port` for server port
+  - `--success-threshold` for minimum success rate
+- **[0.8.1.21]** Success rate calculation and reporting
+- **[0.8.1.22]** JSON report generation for test results
+
+---
+
 ## [0.8.0] - 2026-03-26
 
 ### Added - Phase 4.5: Localhost Test Pages for Use Cases
