@@ -1488,6 +1488,248 @@ class TestSkillIntegration:
 
 
 # ============================================================================
+# Skill Manager Tests
+# ============================================================================
+
+class TestSkillManager:
+    """Tests for SkillManager."""
+    
+    def test_create_manager(self, mock_browser, mock_vision, mock_executor):
+        """Test creating a skill manager."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(
+            browser_controller=mock_browser,
+            vision_client=mock_vision,
+            action_executor=mock_executor,
+        )
+        
+        assert manager.browser == mock_browser
+        assert manager.vision == mock_vision
+        assert manager.executor == mock_executor
+    
+    def test_register_defaults(self, mock_browser):
+        """Test registering default skills."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        skills = manager.list_skills()
+        
+        assert "form_filling" in skills
+        assert "data_extraction" in skills
+        assert "web_scraping" in skills
+        assert "workflow" in skills
+    
+    def test_get_skill(self, mock_browser):
+        """Test getting a skill instance."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        skill = manager.get_skill("form_filling")
+        
+        assert skill is not None
+        assert skill.name == "form_filling"
+    
+    def test_get_nonexistent_skill(self, mock_browser):
+        """Test getting a non-existent skill."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        
+        skill = manager.get_skill("nonexistent")
+        
+        assert skill is None
+    
+    def test_get_skill_info(self, mock_browser):
+        """Test getting skill info."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        info = manager.get_skill_info("form_filling")
+        
+        assert info is not None
+        assert info["name"] == "form_filling"
+        assert "description" in info
+    
+    def test_list_skills(self, mock_browser):
+        """Test listing skills."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        skills = manager.list_skills()
+        
+        assert len(skills) == 4
+        assert "form_filling" in skills
+    
+    def test_get_skills_by_capability(self, mock_browser):
+        """Test getting skills by capability."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        skills = manager.get_skills_by_capability(SkillCapability.DATA_EXTRACTION)
+        
+        assert len(skills) > 0
+    
+    def test_get_skills_for_task(self, mock_browser):
+        """Test finding skills for a task."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        required = [SkillCapability.DATA_EXTRACTION]
+        suitable = manager.get_skills_for_task(required)
+        
+        assert len(suitable) > 0
+    
+    @pytest.mark.asyncio
+    async def test_execute_skill_not_found(self, mock_browser):
+        """Test executing a non-existent skill."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        
+        input_data = SkillInput(task="Test")
+        result = await manager.execute_skill("nonexistent", input_data)
+        
+        assert result.success is False
+        assert "not found" in result.error.lower()
+    
+    @pytest.mark.asyncio
+    async def test_fill_form_convenience(self, mock_browser, mock_vision):
+        """Test fill_form convenience method."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(
+            browser_controller=mock_browser,
+            vision_client=mock_vision,
+        )
+        manager.register_defaults()
+        
+        schema = FormSchema(
+            name="test",
+            fields=[FormField(name="email", field_type=FieldType.EMAIL)],
+        )
+        
+        # Mock the page element
+        mock_element = AsyncMock()
+        mock_browser.page.wait_for_selector = AsyncMock(return_value=mock_element)
+        
+        result = await manager.fill_form(schema, {"email": "test@example.com"})
+        
+        # Result depends on mock setup
+        assert result is not None
+    
+    @pytest.mark.asyncio
+    async def test_extract_data_convenience(self, mock_browser):
+        """Test extract_data convenience method."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        schema = ExtractionSchema(
+            name="test",
+            fields=[ExtractionField(name="title")],
+        )
+        
+        result = await manager.extract_data(schema)
+        
+        # Result depends on mock setup
+        assert result is not None
+    
+    @pytest.mark.asyncio
+    async def test_execute_skills_sequential(self, mock_browser):
+        """Test sequential skill execution."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        skills = [
+            ("form_filling", FormFillingInput(
+                task="Test1",
+                schema=FormSchema(name="s1", fields=[]),
+                data={},
+            )),
+        ]
+        
+        results = await manager.execute_skills_sequential(skills)
+        
+        assert len(results) == 1
+    
+    @pytest.mark.asyncio
+    async def test_execute_skills_parallel(self, mock_browser):
+        """Test parallel skill execution."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        skills = [
+            ("form_filling", FormFillingInput(
+                task="Test1",
+                schema=FormSchema(name="s1", fields=[]),
+                data={},
+            )),
+            ("form_filling", FormFillingInput(
+                task="Test2",
+                schema=FormSchema(name="s2", fields=[]),
+                data={},
+            )),
+        ]
+        
+        results = await manager.execute_skills_parallel(skills)
+        
+        assert len(results) == 2
+    
+    def test_manager_repr(self, mock_browser):
+        """Test manager string representation."""
+        from browser_agent.skills.manager import SkillManager
+        
+        manager = SkillManager(browser_controller=mock_browser)
+        manager.register_defaults()
+        
+        repr_str = repr(manager)
+        
+        assert "SkillManager" in repr_str
+        assert "4" in repr_str
+
+
+class TestCreateSkillManagerForAgent:
+    """Tests for create_skill_manager_for_agent helper."""
+    
+    def test_create_for_agent(self, mock_browser, mock_vision, mock_executor):
+        """Test creating manager for agent."""
+        from browser_agent.skills.manager import create_skill_manager_for_agent
+        
+        # Create mock agent
+        agent = Mock()
+        agent.browser = mock_browser
+        agent.vision_client = mock_vision
+        agent.action_executor = mock_executor
+        agent.config = Mock()
+        agent.config.to_dict = Mock(return_value={})
+        
+        manager = create_skill_manager_for_agent(agent)
+        
+        assert manager is not None
+        assert manager.browser == mock_browser
+        assert manager.vision == mock_vision
+        assert len(manager.list_skills()) == 4
+
+
+# ============================================================================
 # Run Tests
 # ============================================================================
 
