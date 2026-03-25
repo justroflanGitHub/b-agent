@@ -4,9 +4,9 @@
 Browser Agent CLI - Command-line interface for the browser agent.
 
 Usage:
-    python run_agent.py "Search for Python tutorials on Google"
-    python run_agent.py --url https://google.com "Search for AI news"
-    python run_agent.py --config config.yaml "Fill out the form"
+    python run_agent.py "Search for AI news"
+    python run_agent.py --url https://example.com "Fill out the form"
+    python run_agent.py --config config.yaml "Extract data from page"
 """
 
 import asyncio
@@ -152,9 +152,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    python run_agent.py "Search for Python tutorials"
-    python run_agent.py --url https://google.com "Search for AI news"
-    python run_agent.py --headless "Extract data from example.com"
+    python run_agent.py "Search for AI news"
+    python run_agent.py --url https://example.com "Fill out the form"
+    python run_agent.py --headless "Extract data from page"
     python run_agent.py --interactive
         """
     )
@@ -166,7 +166,8 @@ Examples:
     )
     parser.add_argument(
         "--url", "-u",
-        help="Starting URL"
+        default="https://google.com",
+        help="Starting URL (default: https://google.com)"
     )
     parser.add_argument(
         "--config", "-c",
