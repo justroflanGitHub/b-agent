@@ -19,6 +19,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] - 2026-03-25
+
+### Added - Phase 4.6: Multi-Agent Coordination System
+
+#### Base Agent System (`browser_agent/agents/base.py`)
+- **[0.7.0.1]** `AgentStatus` enum for agent states (idle, busy, error, offline)
+- **[0.7.0.2]** `AgentCapability` enum for agent capabilities
+  - PLANNING, ANALYSIS, ACTION_EXECUTION, VALIDATION
+  - VISUAL_PROCESSING, FORM_HANDLING, DATA_EXTRACTION
+  - NAVIGATION, RECOVERY, COORDINATION
+- **[0.7.0.3]** `AgentConfig` dataclass for agent configuration
+- **[0.7.0.4]** `AgentResult` dataclass for execution results
+- **[0.7.0.5]** `AgentState` class for runtime state tracking
+- **[0.7.0.6]** `BaseAgent` abstract class with:
+  - Status tracking and management
+  - Task execution with tracking
+  - Message handling
+  - Statistics collection
+
+#### Communication System (`browser_agent/agents/communication.py`)
+- **[0.7.0.7]** `MessageType` enum for message types
+  - Task-related: TASK_ASSIGNMENT, TASK_RESULT, TASK_STATUS, TASK_CANCEL
+  - Coordination: STATUS_UPDATE, HEARTBEAT, SYNC_REQUEST, SYNC_RESPONSE
+  - Data sharing: DATA_SHARE, QUERY, QUERY_RESPONSE
+  - Control: REGISTER, UNREGISTER, CONFIG_UPDATE
+  - Error: ERROR, WARNING
+  - Collaboration: HELP_REQUEST, HELP_RESPONSE, DELEGATION
+- **[0.7.0.8]** `MessagePriority` enum (LOW, NORMAL, HIGH, URGENT)
+- **[0.7.0.9]** `AgentMessage` dataclass for inter-agent messaging
+- **[0.7.0.10]** `AgentCommunicationBus` class with:
+  - Point-to-point messaging
+  - Broadcast messaging
+  - Subscribe/publish pattern
+  - Message queuing
+  - Message history
+
+#### Planner Agent (`browser_agent/agents/planner.py`)
+- **[0.7.0.11]** `StepStatus` enum (pending, ready, running, completed, failed, skipped)
+- **[0.7.0.12]** `StepType` enum (navigate, click, type, extract, wait, scroll, validate, condition, loop, subtask)
+- **[0.7.0.13]** `StepDependency` class for step dependencies
+- **[0.7.0.14]** `PlanStep` dataclass for plan step definitions
+- **[0.7.0.15]** `TaskPlan` dataclass for execution plans
+- **[0.7.0.16]** `PlanningRequest` dataclass for planning requests
+- **[0.7.0.17]** `PlannerAgent` class with:
+  - Task decomposition
+  - Plan template creation
+  - Plan adaptation on failure
+  - Pattern-based planning (form filling, search, navigation, extraction)
+
+#### Analyzer Agent (`browser_agent/agents/analyzer.py`)
+- **[0.7.0.18]** `AnalysisType` enum (full_page, element_detection, form_analysis, content_extraction, state_check)
+- **[0.7.0.19]** `PageState` enum (loading, ready, error, modal_open, form_submitting, navigating, interactive)
+- **[0.7.0.20]** `ElementInfo` dataclass for detected elements
+- **[0.7.0.21]** `FormField` dataclass for form field info
+- **[0.7.0.22]** `AnalysisResult` dataclass for analysis results
+- **[0.7.0.23]** `AnalysisRequest` dataclass for analysis requests
+- **[0.7.0.24]** `AnalyzerAgent` class with:
+  - Full page analysis
+  - Element detection (visual and DOM-based)
+  - Form analysis
+  - State checking
+  - Element classification
+
+#### Actor Agent (`browser_agent/agents/actor.py`)
+- **[0.7.0.25]** `ActionType` enum for action types
+  - Click, double_click, right_click, hover
+  - Type, press_key, scroll
+  - Navigate, go_back, go_forward, refresh
+  - Wait, select, check, uncheck
+  - Upload, drag, screenshot, extract
+- **[0.7.0.26]** `ActionRequest` dataclass for action requests
+- **[0.7.0.27]** `ActionResult` dataclass for action results
+- **[0.7.0.28]** `ActorAgent` class with:
+  - All browser actions with retry logic
+  - Screenshot capture before/after
+  - Convenience methods (click, type_text, navigate, scroll, wait_for_element)
+
+#### Validator Agent (`browser_agent/agents/validator.py`)
+- **[0.7.0.29]** `ValidationType` enum (success_check, element_present/absent, text_present/absent, url_match/contains, value_check, state_check, custom)
+- **[0.7.0.30]** `ValidationSeverity` enum (info, warning, error, critical)
+- **[0.7.0.31]** `ValidationCriteria` dataclass for validation criteria
+- **[0.7.0.32]** `ValidationFailure` dataclass for failure details
+- **[0.7.0.33]** `ValidationResult` dataclass for validation results
+- **[0.7.0.34]** `ValidationRequest` dataclass for validation requests
+- **[0.7.0.35]** `ValidatorAgent` class with:
+  - Multiple validation types
+  - Custom validator registration
+  - Combined validation
+  - Convenience methods (validate_success, validate_element_exists, validate_url, validate_text_on_page)
+
+#### Supervisor Agent (`browser_agent/agents/supervisor.py`)
+- **[0.7.0.36]** `TaskStatus` enum (pending, planning, executing, validating, completed, failed, cancelled)
+- **[0.7.0.37]** `TaskDelegation` dataclass for task tracking
+- **[0.7.0.38]** `SupervisorConfig` dataclass for supervisor configuration
+- **[0.7.0.39]** `AgentPool` class for agent management
+- **[0.7.0.40]** `SupervisorAgent` class with:
+  - Multi-agent orchestration
+  - Task planning and decomposition
+  - Step execution management
+  - Result validation
+  - Failure recovery
+  - Result synthesis
+
+#### Tests
+- **[0.7.0.41]** `tests/test_agents.py` - 73 comprehensive tests
+  - BaseAgent tests (12 tests)
+  - Communication tests (10 tests)
+  - PlannerAgent tests (10 tests)
+  - AnalyzerAgent tests (8 tests)
+  - ActorAgent tests (7 tests)
+  - ValidatorAgent tests (9 tests)
+  - SupervisorAgent tests (12 tests)
+  - Integration tests (3 tests)
+
+### Statistics
+- **388 tests passing** (14 skipped)
+- **73 new agent tests**
+- **6 new modules** in agents package
+
+---
+
 ## [0.6.0] - 2026-03-25
 
 ### Added - Phase 4: Advanced Capabilities - Skills System
