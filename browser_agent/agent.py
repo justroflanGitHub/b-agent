@@ -770,8 +770,7 @@ Screenshot dimensions: 2560x1440 (width x height)
 
 CRITICAL COORDINATE RULES:
 1. Look at the screenshot CAREFULLY and identify the EXACT pixel coordinates of elements
-2. The search/input field is usually in the CENTER of the page horizontally 
-3. IMPORTANT: Google search bar is (x=xxxx, y=yyy)
+2. IMPORTANT: Google search bar is (x=xxxx, y=yyy)
 
 CRITICAL ACTION RULES - STRICT SEQUENCE:
 1. NEVER repeat "click" after a successful click - move to NEXT step!

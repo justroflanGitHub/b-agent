@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tech Blog - Web Scraping Test Page</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .logo span {
+            color: #3498db;
+        }
+        
+        nav {
+            display: flex;
+            gap: 30px;
+        }
+        
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        nav a:hover {
+            color: #3498db;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 42px;
+            margin-bottom: 15px;
+        }
+        
+        .hero p {
+            font-size: 18px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 40px;
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .content-title {
+            font-size: 24px;
+            color: #2c3e50;
+        }
+        
+        .filter-tags {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-tag {
+            padding: 6px 14px;
+            background: #e0e0e0;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .filter-tag:hover,
+        .filter-tag.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        .blog-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .blog-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            display: flex;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .blog-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        }
+        
+        .blog-image {
+            width: 250px;
+            min-height: 180px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            flex-shrink: 0;
+        }
+        
+        .blog-content {
+            padding: 25px;
+            flex: 1;
+        }
+        
+        .blog-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #888;
+        }
+        
+        .blog-category {
+            background: #3498db;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        .blog-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        .blog-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .blog-title a:hover {
+            color: #3498db;
+        }
+        
+        .blog-excerpt {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .blog-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .blog-author {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .author-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .author-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .read-more {
+            color: #3498db;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        .read-more:hover {
+            text-decoration: underline;
+        }
+        
+        .blog-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 40px;
+        }
+        
+        .pagination button,
+        .pagination a {
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s;
+        }
+        
+        .pagination button:hover,
+        .pagination a:hover {
+            border-color: #3498db;
+            color: #3498db;
+        }
+        
+        .pagination button.active,
+        .pagination a.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .sidebar-widget {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .widget-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .category-list {
+            list-style: none;
+        }
+        
+        .category-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .category-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .category-list a {
+            color: #333;
+            text-decoration: none;
+        }
+        
+        .category-list a:hover {
+            color: #3498db;
+        }
+        
+        .category-count {
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .popular-posts {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .popular-post {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .popular-post-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .popular-post-content {
+            flex: 1;
+        }
+        
+        .popular-post-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+        
+        .popular-post-date {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .newsletter-form input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .newsletter-form button {
+            width: 100%;
+            padding: 12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .newsletter-form button:hover {
+            background: #2980b9;
+        }
+        
+        .load-more-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .load-more-btn {
+            padding: 12px 30px;
+            background: white;
+            border: 2px solid #3498db;
+            color: #3498db;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .load-more-btn:hover {
+            background: #3498db;
+            color: white;
+        }
+        
+        .load-more-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 40px;
+            text-align: center;
+            margin-top: 50px;
+        }
+        
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+            
+            .blog-card {
+                flex-direction: column;
+            }
+            
+            .blog-image {
+                width: 100%;
+                min-height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">Tech<span>Blog</span></div>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="#">Categories</a>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="hero">
+        <h1>Latest Tech Insights</h1>
+        <p>Explore cutting-edge technology trends, tutorials, and industry insights from our expert writers.</p>
+    </div>
+    
+    <main>
+        <div class="main-content">
+            <div class="content-header">
+                <h2 class="content-title">Recent Posts</h2>
+                <div class="filter-tags">
+                    <span class="filter-tag active" data-category="all">All</span>
+                    <span class="filter-tag" data-category="ai">AI</span>
+                    <span class="filter-tag" data-category="web">Web Dev</span>
+                    <span class="filter-tag" data-category="security">Security</span>
+                    <span class="filter-tag" data-category="cloud">Cloud</span>
+                </div>
+            </div>
+            
+            <div class="blog-grid" id="blogGrid">
+                <!-- Blog posts will be dynamically generated -->
+            </div>
+            
+            <div class="pagination" id="pagination">
+                <!-- Pagination will be dynamically generated -->
+            </div>
+            
+            <div class="load-more-container">
+                <button class="load-more-btn" id="loadMoreBtn">Load More Posts</button>
+            </div>
+        </div>
+        
+        <aside class="sidebar">
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Categories</h3>
+                <ul class="category-list">
+                    <li><a href="#">Artificial Intelligence</a> <span class="category-count">8</span></li>
+                    <li><a href="#">Web Development</a> <span class="category-count">12</span></li>
+                    <li><a href="#">Cybersecurity</a> <span class="category-count">6</span></li>
+                    <li><a href="#">Cloud Computing</a> <span class="category-count">9</span></li>
+                    <li><a href="#">Mobile Development</a> <span class="category-count">5</span></li>
+                    <li><a href="#">DevOps</a> <span class="category-count">7</span></li>
+                </ul>
+            </div>
+            
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Popular Posts</h3>
+                <div class="popular-posts" id="popularPosts">
+                    <!-- Popular posts will be dynamically generated -->
+                </div>
+            </div>
+            
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Newsletter</h3>
+                <form class="newsletter-form" id="newsletterForm">
+                    <input type="email" placeholder="Enter your email" required>
+                    <button type="submit">Subscribe</button>
+                </form>
+            </div>
+        </aside>
+    </main>
+    
+    <footer>
+        <p>&copy; 2026 TechBlog. All rights reserved. This is a test page for web scraping.</p>
+    </footer>
+    
+    <script>
+        // Blog post data
+        const allPosts = [
+            // Page 1
+            { id: 1, title: "Getting Started with Machine Learning in 2026", category: "ai", excerpt: "A comprehensive guide to beginning your machine learning journey with Python and TensorFlow. Learn the fundamentals and build your first model.", author: "Sarah Chen", date: "2026-03-20", readTime: 8, views: 15420, comments: 47, image: "🤖" },
+            { id: 2, title: "Building Responsive Web Apps with CSS Grid", category: "web", excerpt: "Master CSS Grid layout with practical examples and best practices for creating responsive web applications that work on any device.", author: "Mike Johnson", date: "2026-03-19", readTime: 6, views: 12350, comments: 32, image: "🌐" },
+            { id: 3, title: "Zero Trust Security: A Complete Implementation Guide", category: "security", excerpt: "Learn how to implement zero trust architecture in your organization. From principles to practical deployment strategies.", author: "Alex Rivera", date: "2026-03-18", readTime: 12, views: 9870, comments: 28, image: "🔒" },
+            { id: 4, title: "Kubernetes Best Practices for Production", category: "cloud", excerpt: "Essential Kubernetes patterns and practices for running production workloads. Security, scaling, and monitoring covered.", author: "David Kim", date: "2026-03-17", readTime: 10, views: 11200, comments: 41, image: "☁️" },
+            { id: 5, title: "The Future of Natural Language Processing", category: "ai", excerpt: "Exploring the latest advances in NLP and what they mean for developers. From transformers to multimodal models.", author: "Emily Watson", date: "2026-03-16", readTime: 7, views: 18900, comments: 56, image: "💬" },
+            
+            // Page 2
+            { id: 6, title: "Modern JavaScript Features You Need to Know", category: "web", excerpt: "ES2026 brings exciting new features. Learn about the latest JavaScript additions and how to use them effectively.", author: "James Lee", date: "2026-03-15", readTime: 5, views: 14500, comments: 38, image: "⚡" },
+            { id: 7, title: "Securing APIs with OAuth 2.0 and OpenID Connect", category: "security", excerpt: "A deep dive into modern API authentication. Implementation examples for secure API access control.", author: "Lisa Park", date: "2026-03-14", readTime: 9, views: 8900, comments: 24, image: "🔑" },
+            { id: 8, title: "Serverless Architecture Patterns", category: "cloud", excerpt: "Design patterns for serverless applications. Learn when and how to use serverless effectively.", author: "Tom Wilson", date: "2026-03-13", readTime: 8, views: 10500, comments: 29, image: "🚀" },
+            { id: 9, title: "Computer Vision Applications in Healthcare", category: "ai", excerpt: "How computer vision is revolutionizing medical diagnosis. Real-world applications and future possibilities.", author: "Dr. Anna Smith", date: "2026-03-12", readTime: 11, views: 7800, comments: 19, image: "🏥" },
+            { id: 10, title: "Building Progressive Web Apps from Scratch", category: "web", excerpt: "Step-by-step guide to creating PWAs. Service workers, caching strategies, and offline functionality.", author: "Chris Brown", date: "2026-03-11", readTime: 14, views: 13200, comments: 45, image: "📱" },
+            
+            // Page 3
+            { id: 11, title: "Ransomware Prevention Strategies", category: "security", excerpt: "Protect your organization from ransomware attacks. Prevention, detection, and recovery strategies.", author: "Mark Davis", date: "2026-03-10", readTime: 10, views: 9500, comments: 33, image: "🛡️" },
+            { id: 12, title: "Multi-Cloud Strategy: Pros and Cons", category: "cloud", excerpt: "Is multi-cloud right for your organization? Analyzing benefits, challenges, and implementation approaches.", author: "Rachel Green", date: "2026-03-09", readTime: 7, views: 8100, comments: 22, image: "🌥️" },
+            { id: 13, title: "Reinforcement Learning Explained", category: "ai", excerpt: "Understanding reinforcement learning algorithms. From Q-learning to deep RL applications.", author: "Kevin Zhang", date: "2026-03-08", readTime: 13, views: 6700, comments: 17, image: "🎮" },
+            { id: 14, title: "WebAssembly: The Future of Web Performance", category: "web", excerpt: "How WebAssembly is changing web development. Performance benefits and practical use cases.", author: "Nina Patel", date: "2026-03-07", readTime: 6, views: 11800, comments: 36, image: "⚡" },
+            { id: 15, title: "Penetration Testing Methodologies", category: "security", excerpt: "Comprehensive guide to penetration testing. Tools, techniques, and reporting best practices.", author: "Jason Moore", date: "2026-03-06", readTime: 15, views: 7200, comments: 21, image: "🔍" }
+        ];
+        
+        const POSTS_PER_PAGE = 5;
+        let currentPage = 1;
+        let displayedPosts = POSTS_PER_PAGE;
+        let currentCategory = 'all';
+        
+        // Get filtered posts
+        function getFilteredPosts() {
+            if (currentCategory === 'all') return allPosts;
+            return allPosts.filter(post => post.category === currentCategory);
+        }
+        
+        // Render blog posts
+        function renderPosts() {
+            const grid = document.getElementById('blogGrid');
+            const filteredPosts = getFilteredPosts();
+            const postsToShow = filteredPosts.slice(0, displayedPosts);
+            
+            grid.innerHTML = '';
+            
+            postsToShow.forEach(post => {
+                const cardHTML = `
+                    <article class="blog-card" data-post-id="${post.id}" data-category="${post.category}">
+                        <div class="blog-image">${post.image}</div>
+                        <div class="blog-content">
+                            <div class="blog-meta">
+                                <span class="blog-category">${post.category}</span>
+                                <span class="blog-date">${post.date}</span>
+                                <span class="blog-read-time">${post.readTime} min read</span>
+                            </div>
+                            <h2 class="blog-title">
+                                <a href="post.html?id=${post.id}">${post.title}</a>
+                            </h2>
+                            <p class="blog-excerpt">${post.excerpt}</p>
+                            <div class="blog-footer">
+                                <div class="blog-author">
+                                    <div class="author-avatar">👤</div>
+                                    <span class="author-name">${post.author}</span>
+                                </div>
+                                <div class="blog-stats">
+                                    <span class="stat">👁 ${post.views.toLocaleString()}</span>
+                                    <span class="stat">💬 ${post.comments}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `;
+                grid.innerHTML += cardHTML;
+            });
+            
+            updatePagination();
+            updateLoadMoreButton();
+        }
+        
+        // Update pagination
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const filteredPosts = getFilteredPosts();
+            const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+            
+            let html = '';
+            
+            // Previous button
+            html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">← Prev</button>`;
+            
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            
+            // Next button
+            html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next →</button>`;
+            
+            pagination.innerHTML = html;
+        }
+        
+        // Update load more button
+        function updateLoadMoreButton() {
+            const btn = document.getElementById('loadMoreBtn');
+            const filteredPosts = getFilteredPosts();
+            btn.disabled = displayedPosts >= filteredPosts.length;
+            btn.textContent = displayedPosts >= filteredPosts.length ? 'No More Posts' : 'Load More Posts';
+        }
+        
+        // Go to specific page
+        function goToPage(page) {
+            const filteredPosts = getFilteredPosts();
+            const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+            
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            displayedPosts = page * POSTS_PER_PAGE;
+            renderPosts();
+            
+            // Scroll to top of blog grid
+            document.getElementById('blogGrid').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Load more posts
+        function loadMore() {
+            displayedPosts += POSTS_PER_PAGE;
+            currentPage = Math.ceil(displayedPosts / POSTS_PER_PAGE);
+            renderPosts();
+        }
+        
+        // Filter by category
+        function filterByCategory(category) {
+            currentCategory = category;
+            currentPage = 1;
+            displayedPosts = POSTS_PER_PAGE;
+            renderPosts();
+            
+            // Update filter tag styles
+            document.querySelectorAll('.filter-tag').forEach(tag => {
+                tag.classList.toggle('active', tag.dataset.category === category);
+            });
+        }
+        
+        // Render popular posts
+        function renderPopularPosts() {
+            const container = document.getElementById('popularPosts');
+            const popular = [...allPosts].sort((a, b) => b.views - a.views).slice(0, 4);
+            
+            container.innerHTML = '';
+            popular.forEach(post => {
+                container.innerHTML += `
+                    <div class="popular-post">
+                        <div class="popular-post-image">${post.image}</div>
+                        <div class="popular-post-content">
+                            <div class="popular-post-title">${post.title}</div>
+                            <div class="popular-post-date">${post.date}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        // Event listeners
+        document.getElementById('loadMoreBtn').addEventListener('click', loadMore);
+        
+        document.querySelectorAll('.filter-tag').forEach(tag => {
+            tag.addEventListener('click', () => filterByCategory(tag.dataset.category));
+        });
+        
+        // Initialize
+        renderPosts();
+        renderPopularPosts();
+        
+        // Expose for testing
+        window.allPosts = allPosts;
+        window.getFilteredPosts = getFilteredPosts;
+        window.goToPage = goToPage;
+        window.loadMore = loadMore;
+        window.filterByCategory = filterByCategory;
+        window.getCurrentPage = () => currentPage;
+        window.getDisplayedCount = () => displayedPosts;
+        
+        // Mark page loaded
+        window.webScrapingPageLoaded = true;
+        window.dispatchEvent(new CustomEvent('webScrapingPageReady'));
+    </script>
+</body>
+</html>

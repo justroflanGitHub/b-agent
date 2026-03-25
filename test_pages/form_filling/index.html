@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Form - Test Page</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        label .required {
+            color: #e74c3c;
+        }
+        
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="date"],
+        input[type="number"],
+        input[type="url"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        
+        input.error,
+        select.error,
+        textarea.error {
+            border-color: #e74c3c;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+        
+        .error-message.visible {
+            display: block;
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .row .form-group {
+            flex: 1;
+        }
+        
+        .checkbox-group,
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 8px;
+        }
+        
+        .checkbox-item,
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        .checkbox-item input,
+        .radio-item input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .checkbox-item label,
+        .radio-item label {
+            margin-bottom: 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        button {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 2;
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            flex: 1;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .success-message.visible {
+            display: flex;
+        }
+        
+        .success-message .icon {
+            font-size: 24px;
+        }
+        
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            -webkit-appearance: none;
+            background: #e0e0e0;
+            border-radius: 4px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .range-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .password-strength {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s, background 0.3s;
+        }
+        
+        .password-strength-bar.weak {
+            background: #e74c3c;
+            width: 33%;
+        }
+        
+        .password-strength-bar.medium {
+            background: #f39c12;
+            width: 66%;
+        }
+        
+        .password-strength-bar.strong {
+            background: #27ae60;
+            width: 100%;
+        }
+        
+        .field-hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+        
+        @media (max-width: 600px) {
+            .row {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Contact Us</h1>
+        <p class="subtitle">Fill out the form below and we'll get back to you shortly.</p>
+        
+        <div class="success-message" id="successMessage">
+            <span class="icon">✓</span>
+            <span>Thank you! Your form has been submitted successfully.</span>
+        </div>
+        
+        <form id="contactForm" novalidate>
+            <!-- Personal Information Section -->
+            <fieldset style="border: none; padding: 0; margin-bottom: 20px;">
+                <legend style="font-size: 18px; font-weight: 600; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">Personal Information</legend>
+                
+                <div class="row">
+                    <div class="form-group">
+                        <label for="firstName">First Name <span class="required">*</span></label>
+                        <input type="text" id="firstName" name="firstName" placeholder="John" required>
+                        <div class="error-message" id="firstNameError">Please enter your first name</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lastName">Last Name <span class="required">*</span></label>
+                        <input type="text" id="lastName" name="lastName" placeholder="Doe" required>
+                        <div class="error-message" id="lastNameError">Please enter your last name</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address <span class="required">*</span></label>
+                    <input type="email" id="email" name="email" placeholder="john.doe@example.com" required>
+                    <div class="error-message" id="emailError">Please enter a valid email address</div>
+                </div>
+                
+                <div class="row">
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567">
+                        <div class="field-hint">Format: +1 (555) 123-4567</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="birthdate">Date of Birth</label>
+                        <input type="date" id="birthdate" name="birthdate">
+                    </div>
+                </div>
+            </fieldset>
+            
+            <!-- Account Section -->
+            <fieldset style="border: none; padding: 0; margin-bottom: 20px;">
+                <legend style="font-size: 18px; font-weight: 600; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">Account Setup</legend>
+                
+                <div class="form-group">
+                    <label for="username">Username <span class="required">*</span></label>
+                    <input type="text" id="username" name="username" placeholder="johndoe123" required minlength="3" maxlength="20">
+                    <div class="field-hint">3-20 characters, letters and numbers only</div>
+                    <div class="error-message" id="usernameError">Username must be 3-20 characters</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password <span class="required">*</span></label>
+                    <input type="password" id="password" name="password" placeholder="Enter a secure password" required minlength="8">
+                    <div class="password-strength">
+                        <div class="password-strength-bar" id="passwordStrengthBar"></div>
+                    </div>
+                    <div class="field-hint">Minimum 8 characters</div>
+                    <div class="error-message" id="passwordError">Password must be at least 8 characters</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password <span class="required">*</span></label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+                    <div class="error-message" id="confirmPasswordError">Passwords do not match</div>
+                </div>
+            </fieldset>
+            
+            <!-- Contact Preferences Section -->
+            <fieldset style="border: none; padding: 0; margin-bottom: 20px;">
+                <legend style="font-size: 18px; font-weight: 600; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">Contact Preferences</legend>
+                
+                <div class="form-group">
+                    <label for="subject">Subject <span class="required">*</span></label>
+                    <select id="subject" name="subject" required>
+                        <option value="">-- Select a subject --</option>
+                        <option value="general">General Inquiry</option>
+                        <option value="support">Technical Support</option>
+                        <option value="sales">Sales Question</option>
+                        <option value="feedback">Feedback</option>
+                        <option value="partnership">Partnership Opportunity</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <div class="error-message" id="subjectError">Please select a subject</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Preferred Contact Method</label>
+                    <div class="radio-group">
+                        <div class="radio-item">
+                            <input type="radio" id="contactEmail" name="contactMethod" value="email" checked>
+                            <label for="contactEmail">Email</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="contactPhone" name="contactMethod" value="phone">
+                            <label for="contactPhone">Phone</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="contactSms" name="contactMethod" value="sms">
+                            <label for="contactSms">SMS</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Best Time to Contact</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="timeMorning" name="bestTime" value="morning">
+                            <label for="timeMorning">Morning (9AM-12PM)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="timeAfternoon" name="bestTime" value="afternoon">
+                            <label for="timeAfternoon">Afternoon (12PM-5PM)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="timeEvening" name="bestTime" value="evening">
+                            <label for="timeEvening">Evening (5PM-8PM)</label>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <!-- Additional Information Section -->
+            <fieldset style="border: none; padding: 0; margin-bottom: 20px;">
+                <legend style="font-size: 18px; font-weight: 600; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;">Additional Information</legend>
+                
+                <div class="form-group">
+                    <label for="website">Your Website</label>
+                    <input type="url" id="website" name="website" placeholder="https://www.example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="budget">Budget Range</label>
+                    <div class="range-container">
+                        <input type="range" id="budget" name="budget" min="0" max="10000" step="100" value="5000">
+                        <span class="range-value" id="budgetValue">$5000</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="priority">Priority Level</label>
+                    <select id="priority" name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" min="1" max="100" value="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">Message <span class="required">*</span></label>
+                    <textarea id="message" name="message" placeholder="Please describe your inquiry in detail..." required minlength="10"></textarea>
+                    <div class="error-message" id="messageError">Please enter a message (minimum 10 characters)</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Interests</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="interestProducts" name="interests" value="products">
+                            <label for="interestProducts">Products</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="interestServices" name="interests" value="services">
+                            <label for="interestServices">Services</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="interestNewsletter" name="interests" value="newsletter">
+                            <label for="interestNewsletter">Newsletter</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="interestEvents" name="interests" value="events">
+                            <label for="interestEvents">Events</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <label for="terms">I agree to the <a href="#" style="color: #667eea;">Terms and Conditions</a> <span class="required">*</span></label>
+                    </div>
+                    <div class="error-message" id="termsError">You must agree to the terms</div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="newsletter" name="newsletter" value="subscribe">
+                        <label for="newsletter">Subscribe to our newsletter for updates and promotions</label>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <div class="button-group">
+                <button type="button" class="btn-secondary" id="resetBtn">Reset</button>
+                <button type="submit" class="btn-primary" id="submitBtn">Submit Form</button>
+            </div>
+        </form>
+    </div>
+    
+    <script src="validation_script.js"></script>
+</body>
+</html>

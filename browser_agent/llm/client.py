@@ -499,6 +499,10 @@ CRITICAL COORDINATE RULES:
 IMPORTANT FOR GOOGLE.COM:
 - The search bar is CENTERED horizontally around X: {viewport_width // 2}
 - Google.com search field coordinates: x=xxxx, y=yyy
+- Google.com search field coordinates is around X=1280, y=650
+- Look for the actual search box position
+- Provide REAL coordinates based on what you see in the screenshot. Don't use generic coordinates.
+- if user uses dark mode, the search bar is lighter, if user uses light mode, the search bar is darker
 
 Return JSON with the center coordinates:
 {{

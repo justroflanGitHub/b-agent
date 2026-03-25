@@ -15,7 +15,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Phase 4.5: Localhost Test Pages for Use Cases (planning only)
+- Phase 5: Production & Polish (in progress)
+
+---
+
+## [0.8.0] - 2026-03-26
+
+### Added - Phase 4.5: Localhost Test Pages for Use Cases
+
+#### Form Filling Test Page (`test_pages/form_filling/`)
+- **[0.8.0.1]** `index.html` - Contact form with various input types:
+  - Text inputs (name, email)
+  - Textarea (message)
+  - Dropdown/select (subject)
+  - Checkboxes (preferences)
+  - Radio buttons (contact method)
+  - Password field, date picker, range slider
+  - Submit button with validation
+- **[0.8.0.2]** `validation_script.js` - Client-side validation with error handling
+- **[0.8.0.3]** `expected_outcomes.md` - Agent behavior documentation
+
+#### Data Extraction Test Page (`test_pages/data_extraction/`)
+- **[0.8.0.4]** `index.html` - Product catalog with 12 products:
+  - Product cards with name, price, description
+  - Star ratings (visual and numeric)
+  - Availability status (In Stock, Low Stock, Out of Stock)
+  - Sale badges and pricing
+- **[0.8.0.5]** `products.json` - Reference data for validation
+- **[0.8.0.6]** `expected_outcomes.md` - Extraction behavior documentation
+
+#### Web Scraping Test Page (`test_pages/web_scraping/`)
+- **[0.8.0.7]** `index.html` - Blog listing with:
+  - 15 blog posts with title, excerpt, date, author
+  - Pagination controls (3 pages)
+  - Category filters (Technology, Design, Business, Tutorials)
+  - Load more button functionality
+- **[0.8.0.8]** `expected_outcomes.md` - Scraping behavior documentation
+
+#### Search & Research Test Page (`test_pages/search_research/`)
+- **[0.8.0.9]** `index.html` - Mock search engine with:
+  - Search input with suggestions
+  - 10 search results with titles, snippets, URLs
+  - Knowledge panel
+  - Related searches
+- **[0.8.0.10]** `article.html` - Article detail page with full content
+- **[0.8.0.11]** `expected_outcomes.md` - Search behavior documentation
+
+#### Workflow Automation Test Page (`test_pages/workflow_automation/`)
+- **[0.8.0.12]** `login.html` - Login page with:
+  - Username/password fields
+  - Remember me checkbox
+  - Client-side validation
+  - Multiple valid credentials (admin/admin123, demo/demo, etc.)
+- **[0.8.0.13]** `dashboard.html` - Dashboard with:
+  - Welcome message
+  - Navigation menu
+  - Download report button
+  - Action items with checkboxes
+  - Modal dialogs
+- **[0.8.0.14]** `expected_outcomes.md` - Workflow behavior documentation
+
+#### E-commerce Interaction Test Page (`test_pages/ecommerce/`)
+- **[0.8.0.15]** `index.html` - Product catalog with:
+  - 12 products with images, prices, ratings
+  - Add to cart functionality
+  - Quantity selectors
+  - Cart persistence (localStorage)
+- **[0.8.0.16]** `cart.html` - Shopping cart with:
+  - Cart items list
+  - Quantity update/remove functionality
+  - Price calculations
+  - Checkout button
+- **[0.8.0.17]** `checkout.html` - Checkout form with:
+  - Shipping address fields
+  - Payment method selection
+  - Order summary
+  - Place order functionality
+- **[0.8.0.18]** `expected_outcomes.md` - E-commerce behavior documentation
+
+#### Test Server Infrastructure
+- **[0.8.0.19]** `test_pages/server.py` - Python HTTP server with:
+  - CORS support (Access-Control-Allow-Origin: *)
+  - No caching headers
+  - Custom port support (default 8080)
+- **[0.8.0.20]** `test_pages/README.md` - Comprehensive documentation for all test pages
+
+### Testing
+- JavaScript testing helpers on all pages (window.fillForm, window.addToCart, etc.)
+- Custom events for testing (formSubmitted, itemAddedToCart, orderPlaced, etc.)
+- localStorage/sessionStorage for state persistence
 
 ---
 

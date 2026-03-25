@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Catalog - Data Extraction Test Page</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e94560;
+        }
+        
+        .search-bar {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-bar input {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            width: 300px;
+            font-size: 14px;
+        }
+        
+        .search-bar button {
+            padding: 10px 25px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 40px;
+        }
+        
+        .page-title {
+            font-size: 28px;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+        }
+        
+        .page-subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-group label {
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .filter-group select {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .results-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .results-count {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            position: relative;
+        }
+        
+        .product-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-sale {
+            background: #e94560;
+            color: white;
+        }
+        
+        .badge-new {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .badge-popular {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .product-info {
+            padding: 20px;
+        }
+        
+        .product-category {
+            font-size: 12px;
+            color: #e94560;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .product-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+        
+        .product-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .product-rating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .stars {
+            color: #f39c12;
+            font-size: 14px;
+        }
+        
+        .rating-count {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .product-price {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .current-price {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        
+        .original-price {
+            font-size: 16px;
+            color: #999;
+            text-decoration: line-through;
+        }
+        
+        .discount {
+            font-size: 12px;
+            color: #e94560;
+            font-weight: 600;
+        }
+        
+        .product-availability {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+        
+        .availability-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .in-stock .availability-dot {
+            background: #27ae60;
+        }
+        
+        .in-stock {
+            color: #27ae60;
+        }
+        
+        .low-stock .availability-dot {
+            background: #f39c12;
+        }
+        
+        .low-stock {
+            color: #f39c12;
+        }
+        
+        .out-of-stock .availability-dot {
+            background: #e74c3c;
+        }
+        
+        .out-of-stock {
+            color: #e74c3c;
+        }
+        
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .product-sku {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .add-to-cart {
+            padding: 10px 20px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .add-to-cart:hover {
+            background: #e94560;
+        }
+        
+        .add-to-cart:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 40px;
+        }
+        
+        .pagination button {
+            padding: 10px 18px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .pagination button:hover {
+            border-color: #1a1a2e;
+        }
+        
+        .pagination button.active {
+            background: #1a1a2e;
+            color: white;
+            border-color: #1a1a2e;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        footer {
+            background: #1a1a2e;
+            color: white;
+            padding: 30px 40px;
+            margin-top: 50px;
+            text-align: center;
+        }
+        
+        /* Data extraction helpers (hidden) */
+        .product-data {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">TechStore</div>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search products...">
+                <button id="searchBtn">Search</button>
+            </div>
+        </div>
+    </header>
+    
+    <main>
+        <h1 class="page-title">Product Catalog</h1>
+        <p class="page-subtitle">Browse our selection of premium tech products</p>
+        
+        <div class="filters">
+            <div class="filter-group">
+                <label for="categoryFilter">Category:</label>
+                <select id="categoryFilter">
+                    <option value="all">All Categories</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="wearables">Wearables</option>
+                    <option value="audio">Audio</option>
+                    <option value="gaming">Gaming</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="priceFilter">Price Range:</label>
+                <select id="priceFilter">
+                    <option value="all">All Prices</option>
+                    <option value="0-50">Under $50</option>
+                    <option value="50-100">$50 - $100</option>
+                    <option value="100-250">$100 - $250</option>
+                    <option value="250+">$250+</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="sortFilter">Sort By:</label>
+                <select id="sortFilter">
+                    <option value="featured">Featured</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="rating">Highest Rated</option>
+                    <option value="newest">Newest</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="results-info">
+            <span class="results-count" id="resultsCount">Showing 12 products</span>
+        </div>
+        
+        <div class="product-grid" id="productGrid">
+            <!-- Products will be dynamically generated -->
+        </div>
+        
+        <div class="pagination" id="pagination">
+            <!-- Pagination will be dynamically generated -->
+        </div>
+    </main>
+    
+    <footer>
+        <p>&copy; 2026 TechStore. All rights reserved. This is a test page for data extraction.</p>
+    </footer>
+    
+    <script src="products.js"></script>
+    <script>
+        // Product data
+        const products = [
+            {
+                id: 1,
+                sku: "TECH-001",
+                name: "Wireless Bluetooth Headphones",
+                category: "audio",
+                description: "Premium over-ear headphones with active noise cancellation and 30-hour battery life.",
+                price: 199.99,
+                originalPrice: 249.99,
+                rating: 4.8,
+                reviewCount: 1247,
+                availability: "in-stock",
+                stock: 45,
+                badge: "sale",
+                featured: true
+            },
+            {
+                id: 2,
+                sku: "TECH-002",
+                name: "Smart Fitness Watch Pro",
+                category: "wearables",
+                description: "Advanced fitness tracking with heart rate monitor, GPS, and 7-day battery life.",
+                price: 299.99,
+                originalPrice: null,
+                rating: 4.9,
+                reviewCount: 892,
+                availability: "in-stock",
+                stock: 32,
+                badge: "popular",
+                featured: true
+            },
+            {
+                id: 3,
+                sku: "TECH-003",
+                name: "Portable Power Bank 20000mAh",
+                category: "accessories",
+                description: "Fast charging power bank with USB-C and dual USB ports. Charges 3 devices simultaneously.",
+                price: 49.99,
+                originalPrice: 69.99,
+                rating: 4.5,
+                reviewCount: 2103,
+                availability: "in-stock",
+                stock: 128,
+                badge: "sale"
+            },
+            {
+                id: 4,
+                sku: "TECH-004",
+                name: "Mechanical Gaming Keyboard",
+                category: "gaming",
+                description: "RGB backlit mechanical keyboard with Cherry MX switches and programmable macros.",
+                price: 149.99,
+                originalPrice: null,
+                rating: 4.7,
+                reviewCount: 567,
+                availability: "in-stock",
+                stock: 23,
+                badge: null
+            },
+            {
+                id: 5,
+                sku: "TECH-005",
+                name: "Wireless Charging Pad",
+                category: "accessories",
+                description: "15W fast wireless charging pad compatible with all Qi-enabled devices.",
+                price: 29.99,
+                originalPrice: 39.99,
+                rating: 4.3,
+                reviewCount: 876,
+                availability: "in-stock",
+                stock: 200,
+                badge: "sale"
+            },
+            {
+                id: 6,
+                sku: "TECH-006",
+                name: "4K Webcam Pro",
+                category: "electronics",
+                description: "Ultra HD webcam with auto-focus, built-in microphone, and low-light correction.",
+                price: 129.99,
+                originalPrice: null,
+                rating: 4.6,
+                reviewCount: 445,
+                availability: "low-stock",
+                stock: 8,
+                badge: "new"
+            },
+            {
+                id: 7,
+                sku: "TECH-007",
+                name: "True Wireless Earbuds",
+                category: "audio",
+                description: "Compact earbuds with premium sound, active noise cancellation, and 24hr total battery.",
+                price: 179.99,
+                originalPrice: 199.99,
+                rating: 4.7,
+                reviewCount: 1567,
+                availability: "in-stock",
+                stock: 67,
+                badge: "sale"
+            },
+            {
+                id: 8,
+                sku: "TECH-008",
+                name: "USB-C Hub 7-in-1",
+                category: "accessories",
+                description: "Multiport adapter with HDMI 4K, USB 3.0, SD card reader, and 100W power delivery.",
+                price: 59.99,
+                originalPrice: null,
+                rating: 4.4,
+                reviewCount: 723,
+                availability: "in-stock",
+                stock: 89,
+                badge: null
+            },
+            {
+                id: 9,
+                sku: "TECH-009",
+                name: "Gaming Mouse RGB",
+                category: "gaming",
+                description: "High-precision gaming mouse with 16000 DPI sensor and customizable RGB lighting.",
+                price: 79.99,
+                originalPrice: 99.99,
+                rating: 4.8,
+                reviewCount: 1089,
+                availability: "in-stock",
+                stock: 54,
+                badge: "sale"
+            },
+            {
+                id: 10,
+                sku: "TECH-010",
+                name: "Smart Home Speaker",
+                category: "electronics",
+                description: "Voice-controlled smart speaker with premium audio and built-in virtual assistant.",
+                price: 129.99,
+                originalPrice: null,
+                rating: 4.5,
+                reviewCount: 2341,
+                availability: "in-stock",
+                stock: 112,
+                badge: "popular"
+            },
+            {
+                id: 11,
+                sku: "TECH-011",
+                name: "Laptop Stand Aluminum",
+                category: "accessories",
+                description: "Ergonomic laptop stand with adjustable height and ventilation design.",
+                price: 39.99,
+                originalPrice: 49.99,
+                rating: 4.6,
+                reviewCount: 567,
+                availability: "in-stock",
+                stock: 145,
+                badge: "sale"
+            },
+            {
+                id: 12,
+                sku: "TECH-012",
+                name: "Wireless Gaming Controller",
+                category: "gaming",
+                description: "Bluetooth controller with haptic feedback, adaptive triggers, and 20hr battery.",
+                price: 69.99,
+                originalPrice: null,
+                rating: 4.7,
+                reviewCount: 892,
+                availability: "out-of-stock",
+                stock: 0,
+                badge: null
+            }
+        ];
+        
+        // Render products
+        function renderProducts(productList) {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+            
+            productList.forEach(product => {
+                const discount = product.originalPrice 
+                    ? Math.round((1 - product.price / product.originalPrice) * 100) 
+                    : 0;
+                
+                const stars = '★'.repeat(Math.floor(product.rating)) + '☆'.repeat(5 - Math.floor(product.rating));
+                
+                const badgeHTML = product.badge 
+                    ? `<span class="product-badge badge-${product.badge}">${product.badge.toUpperCase()}</span>` 
+                    : '';
+                
+                const originalPriceHTML = product.originalPrice 
+                    ? `<span class="original-price">$${product.originalPrice.toFixed(2)}</span>
+                       <span class="discount">-${discount}%</span>` 
+                    : '';
+                
+                const availabilityClass = product.availability;
+                const availabilityText = product.availability === 'in-stock' 
+                    ? `In Stock (${product.stock} available)` 
+                    : product.availability === 'low-stock' 
+                        ? `Low Stock (only ${product.stock} left)` 
+                        : 'Out of Stock';
+                
+                const cardHTML = `
+                    <div class="product-card" data-product-id="${product.id}" data-category="${product.category}">
+                        <div class="product-image">
+                            📦
+                            ${badgeHTML}
+                        </div>
+                        <div class="product-info">
+                            <div class="product-category">${product.category}</div>
+                            <h3 class="product-name">${product.name}</h3>
+                            <p class="product-description">${product.description}</p>
+                            <div class="product-rating">
+                                <span class="stars">${stars}</span>
+                                <span class="rating">${product.rating}</span>
+                                <span class="rating-count">(${product.reviewCount.toLocaleString()} reviews)</span>
+                            </div>
+                            <div class="product-price">
+                                <span class="current-price">$${product.price.toFixed(2)}</span>
+                                ${originalPriceHTML}
+                            </div>
+                            <div class="product-availability ${availabilityClass}">
+                                <span class="availability-dot"></span>
+                                <span>${availabilityText}</span>
+                            </div>
+                            <div class="product-meta">
+                                <span class="product-sku">SKU: ${product.sku}</span>
+                                <button class="add-to-cart" ${product.availability === 'out-of-stock' ? 'disabled' : ''}>
+                                    Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Structured data for extraction -->
+                        <script type="application/ld+json" class="product-data">
+                        {
+                            "@context": "https://schema.org/",
+                            "@type": "Product",
+                            "sku": "${product.sku}",
+                            "name": "${product.name}",
+                            "category": "${product.category}",
+                            "description": "${product.description}",
+                            "price": ${product.price},
+                            "originalPrice": ${product.originalPrice || 'null'},
+                            "currency": "USD",
+                            "rating": ${product.rating},
+                            "reviewCount": ${product.reviewCount},
+                            "availability": "${product.availability}",
+                            "stock": ${product.stock}
+                        }
+                        <\/script>
+                    </div>
+                `;
+                
+                grid.innerHTML += cardHTML;
+            });
+            
+            document.getElementById('resultsCount').textContent = `Showing ${productList.length} products`;
+        }
+        
+        // Initialize
+        renderProducts(products);
+        
+        // Expose for testing
+        window.products = products;
+        window.renderProducts = renderProducts;
+        window.getProductsByCategory = function(category) {
+            return products.filter(p => category === 'all' || p.category === category);
+        };
+        window.getProductsByPriceRange = function(range) {
+            if (range === 'all') return products;
+            const [min, max] = range.split('-').map(v => v === '+' ? Infinity : parseFloat(v));
+            return products.filter(p => p.price >= (min || 0) && p.price <= (max || Infinity));
+        };
+        
+        // Mark page loaded
+        window.dataExtractionPageLoaded = true;
+        window.dispatchEvent(new CustomEvent('dataExtractionPageReady'));
+    </script>
+</body>
+</html>

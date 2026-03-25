@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article - Search & Research Test Page</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #fff;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .article-header {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .breadcrumb {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .breadcrumb a {
+            color: #4285f4;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .article-title {
+            font-size: 32px;
+            color: #202124;
+            margin-bottom: 15px;
+            line-height: 1.3;
+        }
+        
+        .article-meta {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .article-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .article-content {
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .article-content h2 {
+            font-size: 24px;
+            color: #202124;
+            margin: 30px 0 15px;
+        }
+        
+        .article-content h3 {
+            font-size: 20px;
+            color: #202124;
+            margin: 25px 0 12px;
+        }
+        
+        .article-content p {
+            margin-bottom: 16px;
+        }
+        
+        .article-content ul,
+        .article-content ol {
+            margin-bottom: 16px;
+            padding-left: 30px;
+        }
+        
+        .article-content li {
+            margin-bottom: 8px;
+        }
+        
+        .article-content code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .article-content pre {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+        
+        .article-content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .article-content blockquote {
+            border-left: 4px solid #4285f4;
+            padding-left: 16px;
+            margin: 20px 0;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .article-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .article-tags {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .article-tag {
+            padding: 5px 12px;
+            background: #e8f0fe;
+            color: #4285f4;
+            border-radius: 15px;
+            font-size: 13px;
+            text-decoration: none;
+        }
+        
+        .article-tag:hover {
+            background: #4285f4;
+            color: white;
+        }
+        
+        .article-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .action-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .action-btn:hover {
+            border-color: #4285f4;
+            color: #4285f4;
+        }
+        
+        .back-to-results {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #4285f4;
+            text-decoration: none;
+            margin-bottom: 20px;
+        }
+        
+        .back-to-results:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header class="article-header">
+        <div class="breadcrumb">
+            <a href="index.html">Search Results</a> › <span id="articleBreadcrumb">Article</span>
+        </div>
+    </header>
+    
+    <main class="article-container">
+        <a href="index.html" class="back-to-results">← Back to search results</a>
+        
+        <article>
+            <h1 class="article-title" id="articleTitle">Machine Learning: A Comprehensive Guide</h1>
+            
+            <div class="article-meta">
+                <span>📅 <span id="articleDate">March 15, 2026</span></span>
+                <span>⏱️ <span id="articleReadTime">8 min read</span></span>
+                <span>👤 <span id="articleAuthor">Staff Writer</span></span>
+                <span>👁️ <span id="articleViews">15,420 views</span></span>
+            </div>
+            
+            <div class="article-content" id="articleContent">
+                <p><strong>Machine learning</strong> is a subset of artificial intelligence (AI) that enables systems to learn and improve from experience without being explicitly programmed. This comprehensive guide covers the fundamentals, applications, and future of machine learning.</p>
+                
+                <h2>What is Machine Learning?</h2>
+                <p>Machine learning focuses on developing algorithms that can access data, learn from it, and make predictions or decisions. The primary aim is to allow computers to learn automatically without human intervention or assistance.</p>
+                
+                <h2>Types of Machine Learning</h2>
+                
+                <h3>1. Supervised Learning</h3>
+                <p>In supervised learning, the algorithm learns from labeled training data. The model makes predictions and is corrected when wrong. Common applications include:</p>
+                <ul>
+                    <li>Image classification</li>
+                    <li>Spam detection</li>
+                    <li>Price prediction</li>
+                    <li>Medical diagnosis</li>
+                </ul>
+                
+                <h3>2. Unsupervised Learning</h3>
+                <p>Unsupervised learning works with unlabeled data. The algorithm tries to find patterns and structures in the data on its own. Applications include:</p>
+                <ul>
+                    <li>Customer segmentation</li>
+                    <li>Anomaly detection</li>
+                    <li>Dimensionality reduction</li>
+                </ul>
+                
+                <h3>3. Reinforcement Learning</h3>
+                <p>Reinforcement learning involves an agent learning to make decisions by taking actions in an environment and receiving rewards or penalties. It's used in:</p>
+                <ul>
+                    <li>Game playing (AlphaGo, Chess)</li>
+                    <li>Robotics</li>
+                    <li>Autonomous vehicles</li>
+                </ul>
+                
+                <h2>Popular Machine Learning Algorithms</h2>
+                <p>Some of the most widely used algorithms include:</p>
+                <ol>
+                    <li><strong>Linear Regression</strong> - For predicting continuous values</li>
+                    <li><strong>Logistic Regression</strong> - For binary classification</li>
+                    <li><strong>Decision Trees</strong> - For classification and regression</li>
+                    <li><strong>Random Forests</strong> - Ensemble of decision trees</li>
+                    <li><strong>Support Vector Machines (SVM)</strong> - For classification tasks</li>
+                    <li><strong>K-Nearest Neighbors (KNN)</strong> - For classification and regression</li>
+                    <li><strong>Neural Networks</strong> - Deep learning foundation</li>
+                </ol>
+                
+                <h2>Getting Started with Machine Learning</h2>
+                <p>To begin your machine learning journey, you'll need:</p>
+                <ul>
+                    <li>Python programming skills</li>
+                    <li>Understanding of statistics and linear algebra</li>
+                    <li>Familiarity with libraries like NumPy, Pandas, and Scikit-learn</li>
+                </ul>
+                
+                <blockquote>
+                    "Machine learning is the future, and the future is now. Every industry will be transformed by AI and machine learning in the coming years."
+                </blockquote>
+                
+                <h2>Conclusion</h2>
+                <p>Machine learning continues to evolve rapidly, with new techniques and applications emerging regularly. Whether you're a beginner or an experienced practitioner, there's always more to learn in this exciting field.</p>
+            </div>
+            
+            <footer class="article-footer">
+                <div class="article-tags">
+                    <a href="#" class="article-tag">Machine Learning</a>
+                    <a href="#" class="article-tag">Artificial Intelligence</a>
+                    <a href="#" class="article-tag">Data Science</a>
+                    <a href="#" class="article-tag">Python</a>
+                </div>
+                
+                <div class="article-actions">
+                    <button class="action-btn" onclick="window.print()">Print Article</button>
+                    <button class="action-btn" onclick="shareArticle()">Share</button>
+                    <button class="action-btn" onclick="saveArticle()">Save</button>
+                </div>
+            </footer>
+        </article>
+    </main>
+    
+    <script>
+        // Article data
+        const articles = {
+            1: {
+                title: "Machine Learning Course by Stanford University",
+                date: "March 20, 2026",
+                readTime: "8 min read",
+                author: "Stanford Online",
+                views: "15,420"
+            },
+            2: {
+                title: "Machine learning - Wikipedia",
+                date: "March 19, 2026",
+                readTime: "15 min read",
+                author: "Wikipedia Contributors",
+                views: "1,250,000"
+            },
+            default: {
+                title: "Machine Learning: A Comprehensive Guide",
+                date: "March 15, 2026",
+                readTime: "8 min read",
+                author: "Staff Writer",
+                views: "15,420"
+            }
+        };
+        
+        // Get article ID from URL
+        function getArticleId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id') || 'default';
+        }
+        
+        // Load article
+        function loadArticle() {
+            const id = getArticleId();
+            const article = articles[id] || articles.default;
+            
+            document.getElementById('articleTitle').textContent = article.title;
+            document.getElementById('articleDate').textContent = article.date;
+            document.getElementById('articleReadTime').textContent = article.readTime;
+            document.getElementById('articleAuthor').textContent = article.author;
+            document.getElementById('articleViews').textContent = article.views;
+            document.getElementById('articleBreadcrumb').textContent = article.title;
+        }
+        
+        // Share article
+        function shareArticle() {
+            alert('Article shared!');
+        }
+        
+        // Save article
+        function saveArticle() {
+            alert('Article saved!');
+        }
+        
+        // Initialize
+        loadArticle();
+        
+        // Expose for testing
+        window.getArticleId = getArticleId;
+        window.loadArticle = loadArticle;
+        
+        // Mark page loaded
+        window.articlePageLoaded = true;
+        window.dispatchEvent(new CustomEvent('articlePageReady'));
+    </script>
+</body>
+</html>
