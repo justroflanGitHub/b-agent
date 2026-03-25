@@ -19,6 +19,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-03-25
+
+### Added - Phase 4: Advanced Capabilities - Skills System
+
+#### Skill System Architecture
+- **[0.6.0.1]** `browser_agent/skills/__init__.py` - Skills module initialization
+- **[0.6.0.2]** `browser_agent/skills/base.py` - Base skill abstract class
+  - `SkillCapability` enum for capability definitions
+  - `SkillInput` dataclass for skill input parameters
+  - `SkillResult` dataclass for execution results
+  - `BaseSkill` abstract class with execute, validate, verify methods
+  - Built-in retry logic with exponential backoff
+- **[0.6.0.3]** `browser_agent/skills/registry.py` - Skill registration system
+  - `SkillRegistry` class for skill management
+  - Capability-based skill lookup
+  - Global registry with decorator support
+  - Skill instance caching
+
+#### Form Filling Skill
+- **[0.6.0.4]** `browser_agent/skills/form_filling.py`
+  - `FieldType` enum (text, email, password, select, checkbox, radio, etc.)
+  - `FormField` dataclass for field definitions
+  - `FormSchema` dataclass for form structure
+  - `FormFillingInput` for skill input
+  - `FormFillingSkill` with:
+    - Form schema detection from HTML
+    - Field type mapping
+    - Multi-field form completion
+    - Form validation
+    - Form submission with success detection
+
+#### Data Extraction Skill
+- **[0.6.0.5]** `browser_agent/skills/data_extraction.py`
+  - `ExtractionFieldType` enum (text, number, price, rating, url, etc.)
+  - `ExtractionField` dataclass for extraction definitions
+  - `ExtractionSchema` dataclass for extraction structure
+  - `DataExtractionSkill` with:
+    - Schema-based extraction
+    - Multi-item extraction with container selectors
+    - Pagination handling
+    - Deduplication with configurable fields
+    - Value processing (price, rating, number parsing)
+
+#### Web Scraping Skill
+- **[0.6.0.6]** `browser_agent/skills/web_scraping.py`
+  - `ScrapingMode` enum (single_page, paginated, crawl, sitemap)
+  - `ComplianceLevel` enum (strict, moderate, none)
+  - `RateLimitConfig` dataclass for rate limiting
+  - `ScrapingConfig` dataclass for scraping configuration
+  - `WebScrapingSkill` with:
+    - Multi-page navigation (single, paginated, crawl modes)
+    - Data aggregation across pages
+    - Rate limiting with requests per minute
+    - Robots.txt compliance checking
+    - URL pattern filtering (include/exclude)
+
+#### Workflow Automation Skill
+- **[0.6.0.7]** `browser_agent/skills/workflow.py`
+  - `StepType` enum (action, condition, loop, parallel, wait, skill, subworkflow)
+  - `ConditionOperator` enum (equals, contains, greater_than, etc.)
+  - `LoopType` enum (count, while, for_each)
+  - `Condition` class for conditional logic
+  - `WorkflowStep` dataclass for step definitions
+  - `Workflow` dataclass for workflow structure
+  - `WorkflowContext` for execution state management
+  - `WorkflowSkill` with:
+    - Chained operations
+    - Conditional branching (if/else)
+    - Loops (count, while, for-each)
+    - Parallel step execution
+    - Error handling with retry/skip options
+    - Checkpoint save/restore
+
+#### Tests
+- **[0.6.0.8]** `tests/test_skills.py` - 106 comprehensive tests
+  - Base skill tests (13 tests)
+  - Skill registry tests (12 tests)
+  - Form filling skill tests (17 tests)
+  - Data extraction skill tests (17 tests)
+  - Web scraping skill tests (12 tests)
+  - Workflow skill tests (28 tests)
+  - Integration tests (2 tests)
+
+### Statistics
+- **300 tests passing** (14 skipped)
+- **106 new skill tests**
+- **5 new modules** in skills package
+
+---
+
 ## [0.5.1] - 2026-03-25
 
 ### Planning - Phase 4.5: Localhost Test Pages
