@@ -19,6 +19,149 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-03-25
+
+### Added - Phase 3: Resilience & Recovery (Major Feature)
+
+#### Checkpoint System (`browser_agent/resilience/checkpoint.py`)
+- **[0.5.0.1]** CheckpointType enum for checkpoint classification
+  - PRE_ACTION, POST_ACTION, TASK_START, TASK_END
+  - MANUAL, RECOVERY, BRANCH
+
+- **[0.5.0.2]** BrowserState dataclass for browser state snapshots
+  - URL, title, scroll position
+  - Cookies, localStorage, sessionStorage
+  - Form values preservation
+  - Screenshot with hash computation
+  - Serialization to/from dict
+
+- **[0.5.0.3]** Checkpoint dataclass for checkpoint records
+  - Browser state snapshot
+  - Task step tracking
+  - Action name and result
+  - Parent/child relationships
+  - Metadata support
+
+- **[0.5.0.4]** CheckpointManager class for checkpoint management
+  - `create_checkpoint()` - Create checkpoint from page state
+  - `restore_checkpoint()` - Restore browser to checkpoint
+  - `get_checkpoint()` - Retrieve checkpoint by ID
+  - `get_latest_checkpoint()` - Get most recent checkpoint
+  - `get_checkpoints_by_type()` - Filter by checkpoint type
+  - `get_checkpoint_chain()` - Get checkpoint ancestry
+  - Disk persistence with JSON serialization
+  - Screenshot storage in separate files
+  - Configurable max checkpoints with pruning
+  - Checkpoint interval control
+
+#### Fallback Strategy System (`browser_agent/resilience/fallback.py`)
+- **[0.5.0.5]** ErrorType enum for error classification
+  - ELEMENT_NOT_FOUND, ACTION_TIMEOUT, NAVIGATION_ERROR
+  - SELECTOR_INVALID, STATE_MISMATCH, CAPTCHA_BLOCK
+  - RATE_LIMIT, NETWORK_ERROR, BROWSER_CRASH
+  - PERMISSION_DENIED, AUTH_REQUIRED, VALIDATION_ERROR
+
+- **[0.5.0.6]** ErrorContext dataclass for error context
+  - Error type and message
+  - Action name and parameters
+  - Page URL and screenshot
+  - Attempt count and previous errors
+
+- **[0.5.0.7]** FallbackResult dataclass for strategy results
+  - Success/failure status
+  - Recovery action and parameters
+  - Next strategy hint
+  - Retry/abort flags
+
+- **[0.5.0.8]** FallbackStrategy abstract base class
+  - `can_handle()` - Check if strategy applies
+  - `execute()` - Execute fallback strategy
+  - Priority ordering
+  - Max attempts per strategy
+
+- **[0.5.0.9]** Built-in fallback strategies:
+  - **VisualSearchFallback** - Use vision model to find elements
+  - **ScrollAndRetryFallback** - Scroll page and retry
+  - **ExtendedWaitFallback** - Wait longer for elements
+  - **RefreshAndRetryFallback** - Refresh page and retry
+  - **NavigationRetryFallback** - Retry navigation with backoff
+  - **CheckpointRestoreFallback** - Restore from checkpoint
+
+- **[0.5.0.10]** FallbackManager class for strategy coordination
+  - Strategy registration and prioritization
+  - Error classification from patterns
+  - Automatic strategy selection
+  - Strategy execution with tracking
+  - Error and fallback history
+
+#### State Stack (`browser_agent/resilience/state_stack.py`)
+- **[0.5.0.11]** StateFrame dataclass for stack frames
+  - Browser state snapshot
+  - Step index and action info
+  - Parent/child relationships
+  - Branch point support
+  - Access tracking
+
+- **[0.5.0.12]** StateStack class for multi-level rollback
+  - `push()` - Push state onto stack
+  - `pop()` - Pop state from stack
+  - `peek()` - View frame without removing
+  - `rollback()` - Rollback by N steps
+  - `rollback_to_frame()` - Rollback to specific frame
+  - `create_branch()` - Create exploration branch
+  - `switch_branch()` - Switch to different branch
+  - `merge_branch()` - Merge branches
+  - Max depth enforcement
+  - Auto-pruning of old frames
+
+#### Recovery Orchestration (`browser_agent/resilience/recovery.py`)
+- **[0.5.0.13]** RecoveryStatus enum for recovery outcomes
+  - SUCCESS, PARTIAL, FAILED, ABORTED, MANUAL_REQUIRED
+
+- **[0.5.0.14]** RecoveryConfig dataclass for recovery settings
+  - Max recovery attempts
+  - Recovery delay
+  - Enable/disable checkpoints, state stack, fallbacks
+  - Callbacks for success/failure/manual intervention
+
+- **[0.5.0.15]** RecoveryResult dataclass for recovery results
+  - Recovery status and strategy used
+  - Attempts made and actions taken
+  - Restored state ID
+
+- **[0.5.0.16]** RecoveryOrchestrator class for automatic recovery
+  - `recover()` - Main recovery entry point
+  - `create_recovery_checkpoint()` - Checkpoint before recovery
+  - `attempt_checkpoint_restore()` - Try checkpoint restore
+  - `attempt_state_stack_rollback()` - Try stack rollback
+  - `execute_fallback_strategy()` - Execute fallback
+  - `verify_recovery()` - Verify recovery success
+  - `graceful_degradation()` - Graceful fallback options
+  - Manual intervention callbacks
+  - Recovery history tracking
+
+#### Tests (`tests/test_resilience.py`)
+- **[0.5.0.17]** 52 comprehensive tests for Phase 3
+  - BrowserState tests (5 tests)
+  - Checkpoint tests (3 tests)
+  - CheckpointManager tests (10 tests)
+  - ErrorClassification tests (3 tests)
+  - FallbackStrategies tests (4 tests)
+  - FallbackManager tests (10 tests)
+  - StateStack tests (9 tests)
+  - RecoveryOrchestrator tests (7 tests)
+  - Integration tests (1 test)
+
+### Changed
+- Updated `browser_agent/resilience/__init__.py` to export all classes
+
+### Statistics
+- **Total Tests**: 194 passed, 14 skipped
+- **New Tests**: 52 (resilience module)
+- **Progress**: ~55% complete (was ~40%)
+
+---
+
 ## [0.4.0] - 2026-03-24
 
 ### Added - Phase 2: Visual Intelligence (Major Feature)

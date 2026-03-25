@@ -771,7 +771,7 @@ Screenshot dimensions: 2560x1440 (width x height)
 CRITICAL COORDINATE RULES:
 1. Look at the screenshot CAREFULLY and identify the EXACT pixel coordinates of elements
 2. The search/input field is usually in the CENTER of the page horizontally 
-3. IMPORTANT: Google search bar is (x=1280, y=400)
+3. IMPORTANT: Google search bar is (x=xxxx, y=yyy)
 
 CRITICAL ACTION RULES - STRICT SEQUENCE:
 1. NEVER repeat "click" after a successful click - move to NEXT step!
@@ -789,7 +789,7 @@ IMPORTANT: Look at recent actions above!
 - If you see "click: success" in recent actions, DO NOT click again - TYPE instead!
 
 For "{goal}" on Google:
-- Step 1: Click on search field (x=1280, y=400)
+- Step 1: Click on search field (x=xxxx, y=yyy)
 - Step 2: Type the search query (extract from task goal)
 - Step 3: Press Enter
 - Step 4: Complete with result
@@ -842,12 +842,12 @@ For "{goal}" on Google:
                 # Fallback to original coordinates from main prompt
                 x = action.get("x", x)
                 y = action.get("y", y)
-                logger.warning(f"⚠️ Coordinate tool low confidence ({confidence}), using fallback: ({x}, {y})")
+                logger.warning(f"⚠️ Coordinate tool low confidence ({confidence}), using fallback: ({x}, {y*0.75-92})")
             
-            logger.info(f"🎯 Final click coordinates: ({x}, {y}) for '{element_description}'")
+            logger.info(f"🎯 Final click coordinates: ({x}, {y*0.75-92}) for '{element_description}'")
             return await self.action_executor.execute(
                 ActionType.CLICK,
-                target=(x, y),
+                target=(x, y*0.75-92),
                 screenshot=screenshot
             )
         

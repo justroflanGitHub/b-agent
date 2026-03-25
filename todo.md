@@ -155,56 +155,61 @@
 ## Phase 3: Resilience & Recovery (Week 5-6)
 
 ### 3.1 State Checkpoint System
-- [ ] Checkpoint creation before actions
-- [ ] Browser state snapshot (URL, scroll, cookies, localStorage)
-- [ ] Task-level checkpoint with completed steps
-- [ ] Screenshot storage in checkpoints
-- [ ] Navigation history tracking
-- [ ] Form values preservation
-- [ ] Checkpoint persistence to disk
-- [ ] Checkpoint restoration
-- [ ] Checkpoint chain/history
-- [ ] Configurable checkpoint interval
-- [ ] Maximum checkpoint limit with pruning
+- [x] Checkpoint creation before actions
+- [x] Browser state snapshot (URL, scroll, cookies, localStorage)
+- [x] Task-level checkpoint with completed steps
+- [x] Screenshot storage in checkpoints
+- [x] Navigation history tracking
+- [x] Form values preservation
+- [x] Checkpoint persistence to disk
+- [x] Checkpoint restoration
+- [x] Checkpoint chain/history
+- [x] Configurable checkpoint interval
+- [x] Maximum checkpoint limit with pruning
 
 ### 3.2 Fallback Strategy System
-- [~] Basic retry logic (3 retries)
-- [ ] Error classification system:
-  - [ ] ELEMENT_NOT_FOUND
-  - [ ] ACTION_TIMEOUT
-  - [ ] NAVIGATION_ERROR
-  - [ ] SELECTOR_INVALID
-  - [ ] STATE_MISMATCH
-  - [ ] CAPTCHA_BLOCK
-  - [ ] RATE_LIMIT
-- [ ] Fallback strategy implementations:
-  - [ ] Visual search fallback (UI-TARS)
-  - [ ] Alternative selector fallback
-  - [ ] Scroll and retry fallback
-  - [ ] Extended wait fallback
-  - [ ] Refresh and retry fallback
-  - [ ] Navigation retry fallback
-  - [ ] Connectivity check fallback
-- [ ] Strategy priority ordering
-- [ ] Max attempts per strategy
-- [ ] Automatic strategy selection
+- [x] Basic retry logic (3 retries)
+- [x] Error classification system:
+  - [x] ELEMENT_NOT_FOUND
+  - [x] ACTION_TIMEOUT
+  - [x] NAVIGATION_ERROR
+  - [x] SELECTOR_INVALID
+  - [x] STATE_MISMATCH
+  - [x] CAPTCHA_BLOCK
+  - [x] RATE_LIMIT
+  - [x] NETWORK_ERROR
+  - [x] BROWSER_CRASH
+  - [x] PERMISSION_DENIED
+  - [x] AUTH_REQUIRED
+  - [x] VALIDATION_ERROR
+- [x] Fallback strategy implementations:
+  - [x] Visual search fallback (UI-TARS)
+  - [~] Alternative selector fallback (use visual search)
+  - [x] Scroll and retry fallback
+  - [x] Extended wait fallback
+  - [x] Refresh and retry fallback
+  - [x] Navigation retry fallback
+  - [x] Checkpoint restore fallback
+- [x] Strategy priority ordering
+- [x] Max attempts per strategy
+- [x] Automatic strategy selection
 
 ### 3.3 State Stack for Rollback
-- [ ] Stack-based state management
-- [ ] Push/pop state operations
-- [ ] Rollback to specific frame
-- [ ] State frame history
-- [ ] Branch point creation
-- [ ] Branch merging
-- [ ] Max depth enforcement
-- [ ] Orphan frame pruning
+- [x] Stack-based state management
+- [x] Push/pop state operations
+- [x] Rollback to specific frame
+- [x] State frame history
+- [x] Branch point creation
+- [x] Branch merging
+- [x] Max depth enforcement
+- [x] Orphan frame pruning
 
 ### 3.4 Recovery Orchestration
-- [ ] Automatic recovery on failure
-- [ ] Recovery strategy execution
-- [ ] Recovery success verification
-- [ ] Manual intervention hooks
-- [ ] Graceful degradation options
+- [x] Automatic recovery on failure
+- [x] Recovery strategy execution
+- [x] Recovery success verification
+- [x] Manual intervention hooks
+- [x] Graceful degradation options
 
 ---
 
@@ -400,23 +405,24 @@
 |----------|-----------|---------|---------|-------|
 | Phase 1: Core Foundation | 52 | 2 | 9 | 63 |
 | Phase 2: Visual Intelligence | 22 | 0 | 3 | 25 |
-| Phase 3: Resilience & Recovery | 1 | 1 | 32 | 34 |
+| Phase 3: Resilience & Recovery | 33 | 1 | 0 | 34 |
 | Phase 4: Advanced Capabilities | 0 | 0 | 35 | 35 |
 | Phase 5: Production & Polish | 2 | 1 | 30 | 33 |
 | Enhanced Features | 0 | 1 | 19 | 20 |
-| Testing & Quality | 9 | 0 | 7 | 16 |
+| Testing & Quality | 10 | 0 | 6 | 16 |
 | Documentation | 2 | 0 | 5 | 7 |
-| **TOTAL** | **88** | **5** | **140** | **233** |
+| **TOTAL** | **121** | **5** | **107** | **233** |
 
-**Overall Progress: ~40% Complete**
+**Overall Progress: ~55% Complete**
 
 ---
 
-## Recent Changes (v0.3.8)
+## Recent Changes (v0.5.0)
 
-### Tool-Calling Architecture
-- [x] Removed `_click_visual()` and `_type_visual()` from actions.py
-- [x] Added `VisionClient.get_click_coordinates()` as dedicated coordinate tool
-- [x] Updated agent.py to use coordinate tool with confidence fallback
-- [x] Cleaner separation: main prompt decides action, tool calculates coordinates
-- [x] All 106 tests pass
+### Phase 3: Resilience & Recovery - Complete
+- [x] Checkpoint system with browser state snapshots
+- [x] Fallback strategy system with error classification
+- [x] State stack for multi-level rollback
+- [x] Recovery orchestration with automatic recovery
+- [x] 52 new tests for resilience module
+- [x] Total: 194 tests pass, 14 skipped

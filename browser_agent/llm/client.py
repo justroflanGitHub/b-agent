@@ -497,9 +497,8 @@ CRITICAL COORDINATE RULES:
    - Y: 0 to {viewport_height}
 
 IMPORTANT FOR GOOGLE.COM:
-- The search bar is in the UPPER THIRD of the screen
 - The search bar is CENTERED horizontally around X: {viewport_width // 2}
-- Google.com search field coordinates: x=1280, y=400
+- Google.com search field coordinates: x=xxxx, y=yyy
 
 Return JSON with the center coordinates:
 {{
