@@ -267,6 +267,119 @@
 
 ---
 
+## Phase 4.5: Localhost Test Pages for Use Cases (Week 8-9)
+
+### Overview
+Create localhost test pages for each use case to enable automated testing and validation of browser agent capabilities. Each use case gets its own folder with HTML pages and expected outcomes documentation.
+
+### 4.5.1 Use Case 1: Form Filling Test Page
+- [ ] Create `test_pages/form_filling/` directory
+- [ ] `index.html` - Contact form with various input types:
+  - [ ] Text input fields (name, email)
+  - [ ] Textarea (message)
+  - [ ] Dropdown/select (subject)
+  - [ ] Checkboxes (preferences)
+  - [ ] Radio buttons (contact method)
+  - [ ] Submit button
+- [ ] `expected_outcomes.md` - Document expected agent behavior:
+  - [ ] Field detection accuracy
+  - [ ] Input validation rules
+  - [ ] Submit success criteria
+  - [ ] Error handling scenarios
+- [ ] `validation_script.js` - Client-side validation for testing
+
+### 4.5.2 Use Case 2: Data Extraction Test Page
+- [ ] Create `test_pages/data_extraction/` directory
+- [ ] `index.html` - Product listing page:
+  - [ ] Product cards with name, price, description
+  - [ ] Star ratings
+  - [ ] Availability status
+  - [ ] Multiple items (10+ products)
+- [ ] `expected_outcomes.md` - Document expected extraction:
+  - [ ] Product data structure
+  - [ ] Price parsing accuracy
+  - [ ] Rating extraction
+  - [ ] Item count expectations
+- [ ] `products.json` - Reference data for validation
+
+### 4.5.3 Use Case 3: Web Scraping Test Page
+- [ ] Create `test_pages/web_scraping/` directory
+- [ ] `index.html` - Blog listing with pagination:
+  - [ ] Blog post cards with title, excerpt, date
+  - [ ] Pagination controls (1, 2, 3, Next)
+  - [ ] Category filters
+  - [ ] Load more button
+- [ ] `page2.html`, `page3.html` - Additional pages
+- [ ] `expected_outcomes.md` - Document expected behavior:
+  - [ ] Multi-page navigation
+  - [ ] Post extraction accuracy
+  - [ ] Pagination handling
+  - [ ] Rate limiting verification
+
+### 4.5.4 Use Case 4: Search & Research Test Page
+- [ ] Create `test_pages/search_research/` directory
+- [ ] `index.html` - Mock search engine:
+  - [ ] Search input field
+  - [ ] Search results list (10 items)
+  - [ ] Result titles, snippets, URLs
+  - [ ] Sponsored results marking
+- [ ] `results.html` - Search results page
+- [ ] `article1.html`, `article2.html` - Result detail pages
+- [ ] `expected_outcomes.md` - Document expected behavior:
+  - [ ] Query input accuracy
+  - [ ] Result clicking
+  - [ ] Content extraction
+  - [ ] Navigation back/forward
+
+### 4.5.5 Use Case 5: Workflow Automation Test Page
+- [ ] Create `test_pages/workflow_automation/` directory
+- [ ] `login.html` - Login page:
+  - [ ] Username/password fields
+  - [ ] Remember me checkbox
+  - [ ] Login button
+- [ ] `dashboard.html` - Dashboard after login:
+  - [ ] Welcome message
+  - [ ] Navigation menu
+  - [ ] Download report button
+  - [ ] Action items list
+- [ ] `report.pdf` or `report.html` - Downloadable content
+- [ ] `expected_outcomes.md` - Document expected workflow:
+  - [ ] Login sequence
+  - [ ] Navigation steps
+  - [ ] Download trigger
+  - [ ] Logout/cleanup
+
+### 4.5.6 Use Case 6: E-commerce Interaction Test Page
+- [ ] Create `test_pages/ecommerce/` directory
+- [ ] `index.html` - Product catalog:
+  - [ ] Product grid/list
+  - [ ] Add to cart buttons
+  - [ ] Quantity selectors
+  - [ ] Price display
+- [ ] `cart.html` - Shopping cart:
+  - [ ] Cart items list
+  - [ ] Update quantity
+  - [ ] Remove items
+  - [ ] Checkout button
+- [ ] `checkout.html` - Checkout form:
+  - [ ] Shipping address
+  - [ ] Payment fields (mock)
+  - [ ] Place order button
+- [ ] `expected_outcomes.md` - Document expected behavior:
+  - [ ] Product selection
+  - [ ] Cart management
+  - [ ] Checkout flow
+  - [ ] Order confirmation
+
+### 4.5.7 Test Server Infrastructure
+- [ ] `test_pages/server.py` - Simple HTTP server for localhost
+- [ ] `test_pages/start_server.bat` - Windows batch script
+- [ ] `test_pages/start_server.sh` - Linux/Mac shell script
+- [ ] `test_pages/README.md` - Test pages documentation
+- [ ] Integration with pytest for automated testing
+
+---
+
 ## Phase 5: Production & Polish (Week 9-10)
 
 ### 5.1 FastAPI Endpoints
@@ -407,19 +520,26 @@
 | Phase 2: Visual Intelligence | 22 | 0 | 3 | 25 |
 | Phase 3: Resilience & Recovery | 33 | 1 | 0 | 34 |
 | Phase 4: Advanced Capabilities | 0 | 0 | 35 | 35 |
+| Phase 4.5: Localhost Test Pages | 0 | 0 | 42 | 42 |
 | Phase 5: Production & Polish | 2 | 1 | 30 | 33 |
 | Enhanced Features | 0 | 1 | 19 | 20 |
 | Testing & Quality | 10 | 0 | 6 | 16 |
 | Documentation | 2 | 0 | 5 | 7 |
-| **TOTAL** | **121** | **5** | **107** | **233** |
+| **TOTAL** | **121** | **5** | **149** | **275** |
 
-**Overall Progress: ~55% Complete**
+**Overall Progress: ~47% Complete**
 
 ---
 
-## Recent Changes (v0.5.0)
+## Recent Changes (v0.5.1)
 
-### Phase 3: Resilience & Recovery - Complete
+### Planning Update
+- [x] Added Phase 4.5: Localhost Test Pages for Use Cases
+- [x] 42 new tasks for creating test infrastructure
+- [x] Test pages for 6 use cases: Form Filling, Data Extraction, Web Scraping, Search & Research, Workflow Automation, E-commerce
+- [x] Localhost server infrastructure for testing
+
+### v0.5.0 - Phase 3: Resilience & Recovery - Complete
 - [x] Checkpoint system with browser state snapshots
 - [x] Fallback strategy system with error classification
 - [x] State stack for multi-level rollback

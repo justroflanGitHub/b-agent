@@ -15,7 +15,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Nothing yet
+- Phase 4.5: Localhost Test Pages for Use Cases (planning only)
+
+---
+
+## [0.5.1] - 2026-03-25
+
+### Planning - Phase 4.5: Localhost Test Pages
+
+#### Test Infrastructure Planning
+- **[0.5.1.1]** Added Phase 4.5 to todo.md with 42 new tasks for localhost test pages
+- **[0.5.1.2]** Use Case 1: Form Filling test page structure
+  - Text inputs, textarea, dropdown, checkboxes, radio buttons
+  - Expected outcomes documentation
+  - Client-side validation script
+- **[0.5.1.3]** Use Case 2: Data Extraction test page structure
+  - Product listing with name, price, description, ratings
+  - Reference JSON data for validation
+- **[0.5.1.4]** Use Case 3: Web Scraping test page structure
+  - Blog listing with pagination (3 pages)
+  - Category filters, load more button
+- **[0.5.1.5]** Use Case 4: Search & Research test page structure
+  - Mock search engine with results
+  - Article detail pages
+- **[0.5.1.6]** Use Case 5: Workflow Automation test page structure
+  - Login page, dashboard, downloadable report
+- **[0.5.1.7]** Use Case 6: E-commerce Interaction test page structure
+  - Product catalog, shopping cart, checkout flow
+- **[0.5.1.8]** Test server infrastructure
+  - Python HTTP server script
+  - Start scripts for Windows/Linux/Mac
+  - README documentation
+
+### Changed
+- **[0.5.1.9]** Updated todo.md summary statistics (275 total tasks, ~47% complete)
 
 ---
 
