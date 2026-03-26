@@ -19,6 +19,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.2] - 2026-03-26
+
+### Added - Best README Documentation
+
+#### Documentation (`README.md`)
+- **[0.12.2.1]** New comprehensive README.md with:
+  - Project overview and comparison table
+  - Feature highlights with icons
+  - Quick start guide with code examples
+  - Installation instructions
+  - Configuration reference
+  - Architecture diagram (ASCII art)
+  - Action types reference (28+ actions)
+  - REST API endpoints documentation
+  - Code examples for all use cases
+  - Testing guide with statistics
+  - Docker deployment instructions
+  - Contributing guidelines
+  - Support information
+
+---
+
 ## [0.12.1] - 2026-03-26
 
 ### Added - Comprehensive Features Documentation
