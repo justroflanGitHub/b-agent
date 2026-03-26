@@ -19,6 +19,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.1] - 2026-03-26
+
+### Added - Comprehensive Features Documentation
+
+#### Documentation (`FEATURES.md`)
+- **[0.12.1.1]** New comprehensive FEATURES.md documenting ALL features:
+  - **Phase 1: Core Foundation**
+    - Browser Controller (multi-browser, anti-detection, stealth mode, page management)
+    - LLM Client (multi-provider, async, streaming, retry logic)
+    - Action Executor (28 action types, retry logic, human-like typing)
+    - Configuration System (YAML, environment variables, defaults)
+  
+  - **Phase 2: Visual Intelligence**
+    - Vision Client (screenshot analysis, coordinate detection)
+    - Visual Analyzer (page state, element classification, bounding boxes)
+    - Screenshot Diff (change detection, region comparison)
+    - Vision Cache (LRU cache, similarity lookup)
+  
+  - **Phase 3: Resilience & Recovery**
+    - Checkpoint System (7 checkpoint types, state capture, persistence)
+    - Fallback Strategies (6 strategies with priority ordering)
+    - Recovery Orchestrator (automatic recovery, manual intervention hooks)
+    - State Stack (frame-based navigation history)
+  
+  - **Phase 4: Advanced Capabilities**
+    - Multi-Agent System (5 agent types with communication bus)
+    - Skills System (4 specialized skills with registry)
+    - Task Templates (reusable patterns with matching)
+  
+  - **Phase 5: Production & Polish**
+    - FastAPI Endpoints (11 REST endpoints)
+    - Task Manager (concurrent execution, lifecycle management)
+    - Observability (metrics, logging, health checks)
+  
+  - **Memory System (v0.10.0)**
+    - Visual Memory (embedding cache, UI states, navigation patterns)
+    - Proactive Error Prevention (anomaly detection, risk assessment)
+    - Conversation Memory (preferences, corrections, sessions)
+  
+  - **iframe Support (v0.11.0)**
+    - Frame management (switch, exit, nested iframes)
+  
+  - **Testing Infrastructure (v0.12.0)**
+    - Integration tests (20 tests for 7 use cases)
+    - Test pages (7 test page sets with expected outcomes)
+
+---
+
 ## [0.12.0] - 2026-03-26
 
 ### Added - UI-TARS Integration Tests for All Use Cases
