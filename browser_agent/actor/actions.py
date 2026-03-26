@@ -159,6 +159,7 @@ class ActionExecutor:
             ActionType.WAIT_FOR_NAVIGATION: self._wait_for_navigation,
             ActionType.PRESS_KEY: self._press_key,
             ActionType.HANDLE_DIALOG: self._handle_dialog,
+            ActionType.SWITCH_FRAME: self._switch_frame,
         }
     
     async def execute(
@@ -1104,6 +1105,57 @@ class ActionExecutor:
         
         ctx.page.on("dialog", dialog_handler)
         return ActionResult(success=True, action_type=ActionType.HANDLE_DIALOG)
+    
+    async def _switch_frame(
+        self,
+        ctx: ActionContext,
+        target: Optional[str],
+        value: Any,
+        options: Dict
+    ) -> ActionResult:
+        """Switch to iframe or back to main frame.
+        
+        Args:
+            target: CSS selector for iframe, or "main" to switch to main frame,
+                   or "parent" to switch to parent frame
+        """
+        if not target:
+            return ActionResult(
+                success=False,
+                action_type=ActionType.SWITCH_FRAME,
+                error="No frame selector provided"
+            )
+        
+        try:
+            if target == "main":
+                await self.browser.switch_to_main_frame()
+                return ActionResult(
+                    success=True,
+                    action_type=ActionType.SWITCH_FRAME,
+                    data={"frame": "main"}
+                )
+            elif target == "parent":
+                success = await self.browser.switch_to_parent_frame()
+                return ActionResult(
+                    success=success,
+                    action_type=ActionType.SWITCH_FRAME,
+                    data={"frame": "parent"} if success else None,
+                    error=None if success else "No parent frame to switch to"
+                )
+            else:
+                success = await self.browser.switch_frame(target)
+                return ActionResult(
+                    success=success,
+                    action_type=ActionType.SWITCH_FRAME,
+                    data={"frame": target} if success else None,
+                    error=None if success else f"Frame not found: {target}"
+                )
+        except Exception as e:
+            return ActionResult(
+                success=False,
+                action_type=ActionType.SWITCH_FRAME,
+                error=str(e)
+            )
     
     # ==================== Utility Methods ====================
     

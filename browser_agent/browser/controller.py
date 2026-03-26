@@ -135,6 +135,8 @@ class BrowserController:
         self._context = None
         self._pages: List = []
         self._current_page = None
+        self._current_frame = None  # Current iframe (if any)
+        self._frame_stack: List = []  # Stack for nested iframes
         
     async def __aenter__(self):
         await self.launch()
@@ -365,6 +367,60 @@ class BrowserController:
         if self._current_page:
             return await self._current_page.query_selector_all(selector)
         return []
+    
+    # ==================== Frame Management ====================
+    
+    async def switch_frame(self, frame_selector: str) -> bool:
+        """
+        Switch to an iframe by selector.
+        
+        Args:
+            frame_selector: CSS selector for the iframe element
+            
+        Returns:
+            True if frame was found and switched to
+        """
+        if not self._current_page:
+            raise RuntimeError("No active page")
+        
+        frame = self._current_page.frame_locator(frame_selector)
+        if frame:
+            self._frame_stack.append(self._current_frame)
+            self._current_frame = frame
+            logger.info(f"Switched to frame: {frame_selector}")
+            return True
+        logger.warning(f"Frame not found: {frame_selector}")
+        return False
+    
+    async def switch_to_main_frame(self):
+        """Switch back to the main page frame."""
+        self._current_frame = None
+        self._frame_stack = []
+        logger.info("Switched to main frame")
+    
+    async def switch_to_parent_frame(self) -> bool:
+        """Switch to parent frame (if nested iframes)."""
+        if self._frame_stack:
+            self._current_frame = self._frame_stack.pop()
+            logger.info("Switched to parent frame")
+            return True
+        logger.warning("No parent frame to switch to")
+        return False
+    
+    def get_current_frame(self):
+        """Get the current frame (or main page if no frame selected)."""
+        return self._current_frame or self._current_page
+    
+    async def get_frames(self) -> List[str]:
+        """Get list of all iframe selectors on the page."""
+        if not self._current_page:
+            return []
+        
+        frames = await self._current_page.query_selector_all("iframe")
+        return [await frame.get_attribute("id") or await frame.get_attribute("name") or f"iframe[{i}]"
+                for i, frame in enumerate(frames)]
+    
+    # ==================== End Frame Management ====================
     
     async def _add_human_behavior(self, page):
         """Add human-like behavior patterns."""
