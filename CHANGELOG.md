@@ -19,6 +19,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.0] - 2026-03-26
+
+### Added - Memory System (`browser_agent/memory/`)
+
+#### Visual Memory System (`browser_agent/memory/visual_memory.py`)
+- **[0.10.1]** New `ScreenshotEmbeddingCache` class:
+  - LRU cache for screenshot embeddings with configurable max size
+  - Perceptual hash computation for similarity detection
+  - Cosine similarity search for finding similar embeddings
+  - Persistent storage support with pickle serialization
+  - Cache statistics tracking (hits, misses, evictions)
+- **[0.10.2]** New `UIStateDetector` class:
+  - Detect and track UI states from screenshots
+  - State fingerprinting using embeddings
+  - Similar state detection with configurable threshold
+  - State transition tracking
+  - Visit counting and action recording per state
+- **[0.10.3]** New `NavigationPatternLearner` class:
+  - Learn navigation patterns from successful executions
+  - Pattern matching for similar situations
+  - Success rate tracking per pattern
+  - Navigation suggestions based on current state
+  - Automatic eviction of low-success patterns
+- **[0.10.4]** New `DynamicElementReidentifier` class:
+  - Track dynamic elements across page states
+  - Element fingerprinting with content hash
+  - Position tracking with variation detection
+  - State association for elements
+  - Fast lookup by selector, content, or position
+- **[0.10.5]** New `VisualMemorySystem` coordinator class:
+  - Integrates all visual memory components
+  - Navigation tracking with action sequences
+  - Pattern learning from navigation outcomes
+  - Element tracking with state context
+
+#### Conversation Memory System (`browser_agent/memory/conversation_memory.py`)
+- **[0.10.6]** New `UserPreferenceStore` class:
+  - Persistent user preference storage
+  - Category-based organization
+  - Confidence-weighted values
+  - Inferred preferences from behavior
+  - JSON file persistence
+- **[0.10.7]** New `CorrectionFeedbackLearner` class:
+  - Record user corrections to agent actions
+  - Context similarity matching
+  - Apply learned corrections to future actions
+  - Success rate tracking per correction
+- **[0.10.8]** New `TaskTemplateManager` class:
+  - Create reusable task templates
+  - Goal pattern matching with confidence scores
+  - Parameter substitution for template instantiation
+  - Template creation from successful executions
+  - Success rate tracking per template
+- **[0.10.9]** New `SessionMemory` class:
+  - Message history with role tracking
+  - Context management for session state
+  - Goal tracking
+  - Task history recording
+  - Session persistence to JSON
+- **[0.10.10]** New `ConversationMemorySystem` coordinator class:
+  - Integrates all conversation memory components
+  - User input and agent response processing
+  - Correction workflow management
+  - Template-based task execution
+
+#### Error Prevention System (`browser_agent/memory/error_prevention.py`)
+- **[0.10.11]** New `AnomalyDetector` class:
+  - Baseline learning for normal page behavior
+  - Statistical anomaly detection using z-scores
+  - Element presence anomaly detection
+  - Redirect anomaly detection
+  - Popup detection
+  - Error message detection on pages
+- **[0.10.12]** New `HeuristicWarningSystem` class:
+  - Navigation risk warnings (risky URLs)
+  - Action stability analysis (failure patterns)
+  - Form validation warnings
+  - Rate limit detection
+  - Element ambiguity warnings
+  - Custom heuristic support
+- **[0.10.13]** New `SuspiciousStateHandler` class:
+  - Automatic screenshot capture on suspicious states
+  - State fingerprinting for deduplication
+  - Anomaly and warning association
+  - Review queue management
+- **[0.10.14]** New `PreActionRiskAssessment` class:
+  - Multi-factor risk analysis for actions
+  - Action history-based risk scoring
+  - Element stability assessment
+  - Page familiarity consideration
+  - Action complexity evaluation
+  - Context risk factors
+  - Action blocking for high-risk operations
+- **[0.10.15]** New `ErrorPreventionSystem` coordinator class:
+  - Integrates all error prevention components
+  - Page observation with metrics tracking
+  - Action checking with risk assessment
+  - Should-proceed decision making
+
+#### Tests (`tests/test_memory.py`)
+- **[0.10.16]** 96 comprehensive memory system tests - all passing:
+  - EmbeddingVector tests (6 tests)
+  - ScreenshotEmbeddingCache tests (8 tests)
+  - UIStateDetector tests (6 tests)
+  - NavigationPatternLearner tests (5 tests)
+  - DynamicElementReidentifier tests (7 tests)
+  - VisualMemorySystem tests (4 tests)
+  - UserPreferenceStore tests (8 tests)
+  - CorrectionFeedbackLearner tests (5 tests)
+  - TaskTemplateManager tests (6 tests)
+  - SessionMemory tests (8 tests)
+  - ConversationMemorySystem tests (5 tests)
+  - AnomalyDetector tests (7 tests)
+  - HeuristicWarningSystem tests (6 tests)
+  - SuspiciousStateHandler tests (3 tests)
+  - PreActionRiskAssessment tests (6 tests)
+  - ErrorPreventionSystem tests (5 tests)
+  - Integration tests (3 tests)
+
+---
+
 ## [0.9.0] - 2026-03-26
 
 ### Added - Phase 5: Production & Polish
