@@ -741,6 +741,334 @@ class TestEcommerceVision(VisionTestBase):
         self.assert_success_threshold(result)
 
 
+class TestUITestingVision(VisionTestBase):
+    """Vision-guided integration tests for UI Testing use case."""
+    
+    def _get_use_case(self) -> str:
+        return "ui_testing"
+    
+    @pytest.mark.asyncio
+    async def test_button_click_vision(self, request):
+        """Test clicking buttons using UI-TARS vision."""
+        page_url = self.server.get_url("ui_testing/index.html")
+        
+        goal = """Test the button functionality on this page:
+        1. Click the "Primary Button"
+        2. Click the "Success Button"
+        3. Verify the click counter increases
+        Report the final click count."""
+        
+        async def validate_buttons(page):
+            """Validate button clicks worked."""
+            results = []
+            
+            try:
+                # Check click counter
+                counter = await page.query_selector("#click-count")
+                if counter:
+                    count = await counter.text_content()
+                    results.append({
+                        "check": "Click counter increased",
+                        "success": int(count or "0") >= 2,
+                        "click_count": count
+                    })
+            except Exception as e:
+                results.append({
+                    "check": "Click counter increased",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_buttons
+        )
+        
+        print(f"\n=== Button Click Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        self.assert_success_threshold(result)
+    
+    @pytest.mark.asyncio
+    async def test_form_validation_vision(self, request):
+        """Test form validation using UI-TARS vision."""
+        page_url = self.server.get_url("ui_testing/index.html")
+        
+        goal = """Test the form validation:
+        1. Enter an invalid email like "notanemail" in the email field
+        2. Click outside the field to trigger validation
+        3. Verify that an error message appears
+        4. Then enter a valid email like "test@example.com"
+        5. Verify the error disappears"""
+        
+        async def validate_form(page):
+            """Validate form validation worked."""
+            results = []
+            
+            try:
+                # Check for error message visibility
+                error = await page.query_selector("#email-error.visible")
+                results.append({
+                    "check": "Error message appeared",
+                    "success": error is not None
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Error message appeared",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=15,
+            validation_fn=validate_form
+        )
+        
+        print(f"\n=== Form Validation Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        self.assert_success_threshold(result)
+    
+    @pytest.mark.asyncio
+    async def test_modal_interaction_vision(self, request):
+        """Test modal dialog using UI-TARS vision."""
+        page_url = self.server.get_url("ui_testing/index.html")
+        
+        goal = """Test the modal dialog:
+        1. Click the "Open Modal" button
+        2. Verify the modal appears
+        3. Click the "Confirm" button inside the modal
+        4. Verify the modal closes"""
+        
+        async def validate_modal(page):
+            """Validate modal interaction worked."""
+            results = []
+            
+            try:
+                # Check if modal is closed
+                modal = await page.query_selector("#modal-overlay.active")
+                results.append({
+                    "check": "Modal closed after confirm",
+                    "success": modal is None
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Modal closed after confirm",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_modal
+        )
+        
+        print(f"\n=== Modal Interaction Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        self.assert_success_threshold(result)
+    
+    @pytest.mark.asyncio
+    async def test_tabs_navigation_vision(self, request):
+        """Test tab navigation using UI-TARS vision."""
+        page_url = self.server.get_url("ui_testing/index.html")
+        
+        goal = """Test the tab navigation:
+        1. Click on "Tab 2"
+        2. Verify Tab 2 content is visible
+        3. Click on "Tab 3"
+        4. Verify Tab 3 content is visible"""
+        
+        async def validate_tabs(page):
+            """Validate tab navigation worked."""
+            results = []
+            
+            try:
+                # Check if Tab 3 content is active
+                tab3 = await page.query_selector("#tab3.active")
+                results.append({
+                    "check": "Tab 3 content visible",
+                    "success": tab3 is not None
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Tab 3 content visible",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_tabs
+        )
+        
+        print(f"\n=== Tabs Navigation Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        self.assert_success_threshold(result)
+    
+    @pytest.mark.asyncio
+    async def test_toggle_switch_vision(self, request):
+        """Test toggle switches using UI-TARS vision."""
+        page_url = self.server.get_url("ui_testing/index.html")
+        
+        goal = """Test the toggle switches:
+        1. Click the first toggle switch to turn it ON
+        2. Verify the status changes to "ON"
+        3. Click the second toggle switch to turn it ON
+        4. Verify both toggles are ON"""
+        
+        async def validate_toggles(page):
+            """Validate toggle switches worked."""
+            results = []
+            
+            try:
+                # Check toggle statuses
+                status1 = await page.query_selector("#toggle-status-1")
+                status2 = await page.query_selector("#toggle-status-2")
+                
+                text1 = await status1.text_content() if status1 else ""
+                text2 = await status2.text_content() if status2 else ""
+                
+                results.append({
+                    "check": "Toggle 1 is ON",
+                    "success": text1 == "ON",
+                    "status": text1
+                })
+                results.append({
+                    "check": "Toggle 2 is ON",
+                    "success": text2 == "ON",
+                    "status": text2
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Toggle switches worked",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_toggles
+        )
+        
+        print(f"\n=== Toggle Switch Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        self.assert_success_threshold(result)
+    
+    @pytest.mark.asyncio
+    async def test_accordion_vision(self, request):
+        """Test accordion using UI-TARS vision."""
+        page_url = self.server.get_url("ui_testing/index.html")
+        
+        goal = """Test the accordion component:
+        1. Click on "Section 1" header to expand it
+        2. Verify the content is visible
+        3. Click on "Section 2" header to expand it
+        4. Verify Section 1 closes and Section 2 opens"""
+        
+        async def validate_accordion(page):
+            """Validate accordion worked."""
+            results = []
+            
+            try:
+                # Check which section is active
+                section2 = await page.query_selector(".accordion-item:nth-child(2).active")
+                results.append({
+                    "check": "Section 2 is expanded",
+                    "success": section2 is not None
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Section 2 is expanded",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_accordion
+        )
+        
+        print(f"\n=== Accordion Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        self.assert_success_threshold(result)
+    
+    @pytest.mark.asyncio
+    async def test_progress_bar_vision(self, request):
+        """Test progress bar using UI-TARS vision."""
+        page_url = self.server.get_url("ui_testing/index.html")
+        
+        goal = """Test the progress bar:
+        1. Click the "Start Progress" button
+        2. Wait for the progress to complete (100%)
+        3. Verify the progress shows 100%"""
+        
+        async def validate_progress(page):
+            """Validate progress bar worked."""
+            results = []
+            
+            try:
+                # Check progress percentage
+                percent = await page.query_selector("#progress-percent")
+                if percent:
+                    text = await percent.text_content()
+                    results.append({
+                        "check": "Progress reached 100%",
+                        "success": text == "100%",
+                        "percent": text
+                    })
+            except Exception as e:
+                results.append({
+                    "check": "Progress reached 100%",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=15,
+            validation_fn=validate_progress
+        )
+        
+        print(f"\n=== Progress Bar Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        # More lenient for progress bar as it requires timing
+        assert result.success_rate >= 50.0, (
+            f"Success rate {result.success_rate:.1f}% below threshold 50%"
+        )
+
+
 class TestSuccessRateReport(VisionTestBase):
     """Generate overall success rate report for all use cases."""
     
@@ -823,6 +1151,11 @@ async def run_all_vision_tests(
             "use_case": "ecommerce",
             "goal": "Add a product to the shopping cart",
             "url": f"{base_url}/ecommerce/index.html"
+        },
+        {
+            "use_case": "ui_testing",
+            "goal": "Test button clicks, form validation, and modal interactions",
+            "url": f"{base_url}/ui_testing/index.html"
         }
     ]
     

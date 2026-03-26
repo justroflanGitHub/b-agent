@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Testing Demo - Browser Agent Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        /* Button Tests */
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd6;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-disabled {
+            background: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        .btn-clicked {
+            transform: scale(0.95);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        /* Click Counter */
+        #click-counter {
+            font-size: 1.2rem;
+            color: #667eea;
+            margin-top: 15px;
+        }
+        
+        /* Form Tests */
+        .test-form {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group input.invalid {
+            border-color: #dc3545;
+            background: #fff8f8;
+        }
+        
+        .form-group input.valid {
+            border-color: #28a745;
+            background: #f8fff8;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 12px;
+            display: none;
+        }
+        
+        .error-message.visible {
+            display: block;
+        }
+        
+        /* Visibility Tests */
+        .visibility-test {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        
+        .visibility-item {
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .hidden-element {
+            display: none;
+        }
+        
+        .invisible-element {
+            visibility: hidden;
+        }
+        
+        .transparent-element {
+            opacity: 0;
+        }
+        
+        /* State Tests */
+        .state-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .state-display {
+            padding: 20px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: #333;
+        }
+        
+        .state-loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Toggle Test */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 30px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #667eea;
+        }
+        
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(30px);
+        }
+        
+        .toggle-status {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        /* Accordion Test */
+        .accordion {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .accordion-item {
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .accordion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .accordion-header {
+            padding: 15px 20px;
+            background: #f5f5f5;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+        
+        .accordion-header:hover {
+            background: #e8e8e8;
+        }
+        
+        .accordion-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .accordion-item.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .accordion-item.active .accordion-content {
+            max-height: 200px;
+        }
+        
+        .accordion-body {
+            padding: 20px;
+        }
+        
+        /* Modal Test */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .modal h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .modal p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        /* Drag and Drop Test */
+        .drag-container {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .drag-zone {
+            flex: 1;
+            min-height: 150px;
+            padding: 15px;
+            background: #f5f5f5;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+        }
+        
+        .drag-zone.drag-over {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .draggable {
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            cursor: grab;
+            margin-bottom: 10px;
+        }
+        
+        .draggable:active {
+            cursor: grabbing;
+        }
+        
+        .draggable.dragging {
+            opacity: 0.5;
+        }
+        
+        /* Progress Test */
+        .progress-container {
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        /* Notification Test */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+        
+        .notification {
+            padding: 15px 20px;
+            background: #333;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .notification.success {
+            background: #28a745;
+        }
+        
+        .notification.error {
+            background: #dc3545;
+        }
+        
+        .notification.warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Responsive Test */
+        .responsive-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .responsive-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .responsive-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .responsive-item {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        /* Test Results */
+        .test-results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .test-result-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .test-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .result-icon.pass {
+            background: #28a745;
+            color: white;
+        }
+        
+        .result-icon.fail {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .result-icon.pending {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        /* Tabs Test */
+        .tabs-container {
+            margin-top: 20px;
+        }
+        
+        .tabs-nav {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab-btn {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Tooltip Test */
+        .tooltip-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .tooltip-trigger {
+            position: relative;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            cursor: help;
+        }
+        
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: #333;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+        
+        .tooltip-trigger:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Animation Test */
+        .animation-box {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            margin: 20px auto;
+        }
+        
+        .animation-box.animate {
+            animation: pulse 1s ease infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        /* Assertion Test Area */
+        #assertion-area {
+            min-height: 100px;
+            padding: 20px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            border: 2px dashed #667eea;
+        }
+        
+        #assertion-area.success {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        
+        #assertion-area.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧪 UI Testing Demo</h1>
+            <p>Test page for Browser Agent UI Testing capabilities</p>
+        </header>
+        
+        <!-- Button Tests -->
+        <section class="test-section" id="button-tests">
+            <h2>Button Tests</h2>
+            <div class="button-grid">
+                <button class="btn btn-primary" id="btn-primary" data-testid="primary-button">Primary Button</button>
+                <button class="btn btn-secondary" id="btn-secondary" data-testid="secondary-button">Secondary Button</button>
+                <button class="btn btn-success" id="btn-success" data-testid="success-button">Success Button</button>
+                <button class="btn btn-danger" id="btn-danger" data-testid="danger-button">Danger Button</button>
+                <button class="btn btn-warning" id="btn-warning" data-testid="warning-button">Warning Button</button>
+                <button class="btn btn-disabled" id="btn-disabled" disabled data-testid="disabled-button">Disabled Button</button>
+            </div>
+            <div id="click-counter">Click count: <span id="click-count">0</span></div>
+        </section>
+        
+        <!-- Form Validation Tests -->
+        <section class="test-section" id="form-tests">
+            <h2>Form Validation Tests</h2>
+            <form class="test-form" id="test-form">
+                <div class="form-group">
+                    <label for="email-input">Email (required)</label>
+                    <input type="email" id="email-input" data-testid="email-input" placeholder="Enter email" required>
+                    <span class="error-message" id="email-error">Please enter a valid email</span>
+                </div>
+                <div class="form-group">
+                    <label for="password-input">Password (min 8 characters)</label>
+                    <input type="password" id="password-input" data-testid="password-input" placeholder="Enter password" minlength="8">
+                    <span class="error-message" id="password-error">Password must be at least 8 characters</span>
+                </div>
+                <div class="form-group">
+                    <label for="phone-input">Phone (format: XXX-XXX-XXXX)</label>
+                    <input type="tel" id="phone-input" data-testid="phone-input" placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}">
+                    <span class="error-message" id="phone-error">Please use format: XXX-XXX-XXXX</span>
+                </div>
+                <div class="form-group">
+                    <label for="select-input">Select Option</label>
+                    <select id="select-input" data-testid="select-input">
+                        <option value="">Choose an option</option>
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                        <option value="option3">Option 3</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" data-testid="submit-form">Submit Form</button>
+            </form>
+        </section>
+        
+        <!-- Visibility Tests -->
+        <section class="test-section" id="visibility-tests">
+            <h2>Visibility Tests</h2>
+            <div class="visibility-test">
+                <div class="visibility-item" data-testid="visible-element">
+                    <p>Visible Element</p>
+                    <p>This element is always visible</p>
+                </div>
+                <div class="visibility-item hidden-element" data-testid="hidden-element">
+                    <p>Hidden Element</p>
+                    <p>This element is hidden (display: none)</p>
+                </div>
+                <div class="visibility-item invisible-element" data-testid="invisible-element">
+                    <p>Invisible Element</p>
+                    <p>This element is invisible (visibility: hidden)</p>
+                </div>
+            </div>
+            <button class="btn btn-secondary" id="toggle-hidden" data-testid="toggle-hidden-btn">Toggle Hidden Element</button>
+        </section>
+        
+        <!-- State Tests -->
+        <section class="test-section" id="state-tests">
+            <h2>State Tests</h2>
+            <div class="state-container">
+                <div class="state-display" id="state-display" data-testid="state-display">
+                    Current State: <span id="current-state">Idle</span>
+                </div>
+                <div class="state-loading" id="loading-indicator" data-testid="loading-indicator">
+                    <div class="spinner"></div>
+                    <span>Loading...</span>
+                </div>
+                <div>
+                    <button class="btn btn-primary" id="start-loading" data-testid="start-loading-btn">Start Loading</button>
+                    <button class="btn btn-secondary" id="stop-loading" data-testid="stop-loading-btn">Stop Loading</button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Toggle Test -->
+        <section class="test-section" id="toggle-tests">
+            <h2>Toggle Tests</h2>
+            <div class="toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-1" data-testid="toggle-1">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-status" id="toggle-status-1" data-testid="toggle-status-1">OFF</span>
+            </div>
+            <div class="toggle-container" style="margin-top: 15px;">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-2" data-testid="toggle-2">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-status" id="toggle-status-2" data-testid="toggle-status-2">OFF</span>
+            </div>
+        </section>
+        
+        <!-- Accordion Test -->
+        <section class="test-section" id="accordion-tests">
+            <h2>Accordion Tests</h2>
+            <div class="accordion" data-testid="accordion">
+                <div class="accordion-item">
+                    <div class="accordion-header" data-testid="accordion-header-1">
+                        <span>Section 1</span>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="accordion-body">
+                            <p>Content for section 1. This should be hidden until the header is clicked.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header" data-testid="accordion-header-2">
+                        <span>Section 2</span>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="accordion-body">
+                            <p>Content for section 2. Click to expand and see this content.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header" data-testid="accordion-header-3">
+                        <span>Section 3</span>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="accordion-body">
+                            <p>Content for section 3. Each section can be expanded independently.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Modal Test -->
+        <section class="test-section" id="modal-tests">
+            <h2>Modal Tests</h2>
+            <button class="btn btn-primary" id="open-modal" data-testid="open-modal-btn">Open Modal</button>
+            <div class="modal-overlay" id="modal-overlay" data-testid="modal-overlay">
+                <div class="modal">
+                    <button class="modal-close" id="close-modal" data-testid="close-modal-btn">&times;</button>
+                    <h3>Test Modal</h3>
+                    <p>This is a test modal dialog. The browser agent should be able to open and close it.</p>
+                    <button class="btn btn-success" id="modal-confirm" data-testid="modal-confirm-btn">Confirm</button>
+                    <button class="btn btn-secondary" id="modal-cancel" data-testid="modal-cancel-btn">Cancel</button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Tabs Test -->
+        <section class="test-section" id="tabs-tests">
+            <h2>Tabs Tests</h2>
+            <div class="tabs-container" data-testid="tabs-container">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="tab1" data-testid="tab-btn-1">Tab 1</button>
+                    <button class="tab-btn" data-tab="tab2" data-testid="tab-btn-2">Tab 2</button>
+                    <button class="tab-btn" data-tab="tab3" data-testid="tab-btn-3">Tab 3</button>
+                </div>
+                <div class="tab-content active" id="tab1" data-testid="tab-content-1">
+                    <h4>Tab 1 Content</h4>
+                    <p>This is the content for the first tab.</p>
+                </div>
+                <div class="tab-content" id="tab2" data-testid="tab-content-2">
+                    <h4>Tab 2 Content</h4>
+                    <p>This is the content for the second tab.</p>
+                </div>
+                <div class="tab-content" id="tab3" data-testid="tab-content-3">
+                    <h4>Tab 3 Content</h4>
+                    <p>This is the content for the third tab.</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Progress Test -->
+        <section class="test-section" id="progress-tests">
+            <h2>Progress Tests</h2>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" data-testid="progress-fill"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="progress-percent" data-testid="progress-percent">0%</span>
+                    <span>100%</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="start-progress" data-testid="start-progress-btn">Start Progress</button>
+            <button class="btn btn-secondary" id="reset-progress" data-testid="reset-progress-btn">Reset Progress</button>
+        </section>
+        
+        <!-- Drag and Drop Test -->
+        <section class="test-section" id="drag-tests">
+            <h2>Drag and Drop Tests</h2>
+            <div class="drag-container">
+                <div class="drag-zone" id="drag-zone-1" data-testid="drag-zone-1">
+                    <div class="draggable" draggable="true" id="drag-item-1" data-testid="drag-item-1">Drag Item 1</div>
+                    <div class="draggable" draggable="true" id="drag-item-2" data-testid="drag-item-2">Drag Item 2</div>
+                </div>
+                <div class="drag-zone" id="drag-zone-2" data-testid="drag-zone-2">
+                    <div class="draggable" draggable="true" id="drag-item-3" data-testid="drag-item-3">Drag Item 3</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Animation Test -->
+        <section class="test-section" id="animation-tests">
+            <h2>Animation Tests</h2>
+            <div class="animation-box" id="animation-box" data-testid="animation-box"></div>
+            <div style="text-align: center;">
+                <button class="btn btn-primary" id="start-animation" data-testid="start-animation-btn">Start Animation</button>
+                <button class="btn btn-secondary" id="stop-animation" data-testid="stop-animation-btn">Stop Animation</button>
+            </div>
+        </section>
+        
+        <!-- Tooltip Test -->
+        <section class="test-section" id="tooltip-tests">
+            <h2>Tooltip Tests</h2>
+            <div class="tooltip-container">
+                <div class="tooltip-trigger" data-testid="tooltip-1">
+                    Hover me (Top)
+                    <span class="tooltip">This is a top tooltip</span>
+                </div>
+                <div class="tooltip-trigger" data-testid="tooltip-2">
+                    More info (Top)
+                    <span class="tooltip">Another tooltip example</span>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Assertion Test Area -->
+        <section class="test-section" id="assertion-tests">
+            <h2>Assertion Test Area</h2>
+            <p>This area can be used to test various assertions:</p>
+            <div id="assertion-area" data-testid="assertion-area">
+                <p>Assertion area - use buttons below to change state</p>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-success" id="assert-success" data-testid="assert-success-btn">Set Success</button>
+                <button class="btn btn-danger" id="assert-error" data-testid="assert-error-btn">Set Error</button>
+                <button class="btn btn-secondary" id="assert-reset" data-testid="assert-reset-btn">Reset</button>
+            </div>
+        </section>
+        
+        <!-- Responsive Test -->
+        <section class="test-section" id="responsive-tests">
+            <h2>Responsive Grid Test</h2>
+            <p>Resize the browser window to see the grid change:</p>
+            <div class="responsive-grid" data-testid="responsive-grid">
+                <div class="responsive-item">Item 1</div>
+                <div class="responsive-item">Item 2</div>
+                <div class="responsive-item">Item 3</div>
+                <div class="responsive-item">Item 4</div>
+            </div>
+        </section>
+        
+        <!-- Test Results -->
+        <section class="test-section" id="test-results-section">
+            <h2>Test Results</h2>
+            <div class="test-results" id="test-results" data-testid="test-results">
+                <div class="test-result-item">
+                    <div class="result-icon pending">?</div>
+                    <span>Button click test - Pending</span>
+                </div>
+                <div class="test-result-item">
+                    <div class="result-icon pending">?</div>
+                    <span>Form validation test - Pending</span>
+                </div>
+                <div class="test-result-item">
+                    <div class="result-icon pending">?</div>
+                    <span>Modal test - Pending</span>
+                </div>
+                <div class="test-result-item">
+                    <div class="result-icon pending">?</div>
+                    <span>Tab navigation test - Pending</span>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <!-- Notification Container -->
+    <div class="notification-container" id="notification-container"></div>
+    
+    <script>
+        // Click counter
+        let clickCount = 0;
+        document.querySelectorAll('.btn:not(.btn-disabled)').forEach(btn => {
+            btn.addEventListener('click', function() {
+                clickCount++;
+                document.getElementById('click-count').textContent = clickCount;
+                this.classList.add('btn-clicked');
+                setTimeout(() => this.classList.remove('btn-clicked'), 200);
+            });
+        });
+        
+        // Form validation
+        const form = document.getElementById('test-form');
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+        const phoneInput = document.getElementById('phone-input');
+        
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+        
+        function validatePhone(phone) {
+            return /^[0-9]{3}-[0-9]{3}-[0-9]{4}$/.test(phone);
+        }
+        
+        emailInput.addEventListener('blur', function() {
+            const error = document.getElementById('email-error');
+            if (this.value && !validateEmail(this.value)) {
+                this.classList.add('invalid');
+                error.classList.add('visible');
+            } else {
+                this.classList.remove('invalid');
+                this.classList.add('valid');
+                error.classList.remove('visible');
+            }
+        });
+        
+        passwordInput.addEventListener('blur', function() {
+            const error = document.getElementById('password-error');
+            if (this.value && this.value.length < 8) {
+                this.classList.add('invalid');
+                error.classList.add('visible');
+            } else if (this.value) {
+                this.classList.remove('invalid');
+                this.classList.add('valid');
+                error.classList.remove('visible');
+            }
+        });
+        
+        phoneInput.addEventListener('blur', function() {
+            const error = document.getElementById('phone-error');
+            if (this.value && !validatePhone(this.value)) {
+                this.classList.add('invalid');
+                error.classList.add('visible');
+            } else if (this.value) {
+                this.classList.remove('invalid');
+                this.classList.add('valid');
+                error.classList.remove('visible');
+            }
+        });
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            showNotification('Form submitted successfully!', 'success');
+        });
+        
+        // Toggle hidden element
+        const toggleBtn = document.getElementById('toggle-hidden');
+        const hiddenElement = document.querySelector('.hidden-element');
+        
+        toggleBtn.addEventListener('click', function() {
+            if (hiddenElement.style.display === 'block') {
+                hiddenElement.style.display = 'none';
+                showNotification('Element hidden', 'warning');
+            } else {
+                hiddenElement.style.display = 'block';
+                showNotification('Element shown', 'success');
+            }
+        });
+        
+        // Loading state
+        const startLoadingBtn = document.getElementById('start-loading');
+        const stopLoadingBtn = document.getElementById('stop-loading');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const currentStateSpan = document.getElementById('current-state');
+        
+        startLoadingBtn.addEventListener('click', function() {
+            loadingIndicator.style.display = 'flex';
+            currentStateSpan.textContent = 'Loading';
+        });
+        
+        stopLoadingBtn.addEventListener('click', function() {
+            loadingIndicator.style.display = 'none';
+            currentStateSpan.textContent = 'Idle';
+        });
+        
+        // Toggle switches
+        document.querySelectorAll('.toggle-switch input').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const statusId = this.id.replace('toggle-', 'toggle-status-');
+                const status = document.getElementById(statusId);
+                status.textContent = this.checked ? 'ON' : 'OFF';
+            });
+        });
+        
+        // Accordion
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const item = this.parentElement;
+                const wasActive = item.classList.contains('active');
+                
+                // Close all items
+                document.querySelectorAll('.accordion-item').forEach(i => {
+                    i.classList.remove('active');
+                });
+                
+                // Open clicked item if it wasn't active
+                if (!wasActive) {
+                    item.classList.add('active');
+                }
+            });
+        });
+        
+        // Modal
+        const openModalBtn = document.getElementById('open-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        
+        openModalBtn.addEventListener('click', () => {
+            modalOverlay.classList.add('active');
+        });
+        
+        closeModalBtn.addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+        });
+        
+        modalConfirm.addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+            showNotification('Modal confirmed!', 'success');
+        });
+        
+        modalCancel.addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+            showNotification('Modal cancelled', 'warning');
+        });
+        
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+            }
+        });
+        
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tabId = this.dataset.tab;
+                
+                // Update buttons
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update content
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Progress bar
+        const progressFill = document.getElementById('progress-fill');
+        const progressPercent = document.getElementById('progress-percent');
+        const startProgressBtn = document.getElementById('start-progress');
+        const resetProgressBtn = document.getElementById('reset-progress');
+        let progressInterval;
+        
+        startProgressBtn.addEventListener('click', function() {
+            let progress = 0;
+            clearInterval(progressInterval);
+            
+            progressInterval = setInterval(() => {
+                progress += 5;
+                progressFill.style.width = progress + '%';
+                progressPercent.textContent = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    showNotification('Progress complete!', 'success');
+                }
+            }, 200);
+        });
+        
+        resetProgressBtn.addEventListener('click', function() {
+            clearInterval(progressInterval);
+            progressFill.style.width = '0%';
+            progressPercent.textContent = '0%';
+        });
+        
+        // Drag and drop
+        const dragZones = document.querySelectorAll('.drag-zone');
+        const draggables = document.querySelectorAll('.draggable');
+        
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', function() {
+                this.classList.add('dragging');
+            });
+            
+            draggable.addEventListener('dragend', function() {
+                this.classList.remove('dragging');
+            });
+        });
+        
+        dragZones.forEach(zone => {
+            zone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+            
+            zone.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over');
+            });
+            
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                const dragging = document.querySelector('.dragging');
+                if (dragging) {
+                    this.appendChild(dragging);
+                    showNotification('Item dropped!', 'success');
+                }
+            });
+        });
+        
+        // Animation
+        const animationBox = document.getElementById('animation-box');
+        const startAnimationBtn = document.getElementById('start-animation');
+        const stopAnimationBtn = document.getElementById('stop-animation');
+        
+        startAnimationBtn.addEventListener('click', () => {
+            animationBox.classList.add('animate');
+        });
+        
+        stopAnimationBtn.addEventListener('click', () => {
+            animationBox.classList.remove('animate');
+        });
+        
+        // Assertion area
+        const assertionArea = document.getElementById('assertion-area');
+        const assertSuccessBtn = document.getElementById('assert-success');
+        const assertErrorBtn = document.getElementById('assert-error');
+        const assertResetBtn = document.getElementById('assert-reset');
+        
+        assertSuccessBtn.addEventListener('click', () => {
+            assertionArea.className = 'success';
+            assertionArea.innerHTML = '<p style="color: #155724;">✓ Success state activated</p>';
+        });
+        
+        assertErrorBtn.addEventListener('click', () => {
+            assertionArea.className = 'error';
+            assertionArea.innerHTML = '<p style="color: #721c24;">✗ Error state activated</p>';
+        });
+        
+        assertResetBtn.addEventListener('click', () => {
+            assertionArea.className = '';
+            assertionArea.innerHTML = '<p>Assertion area - use buttons below to change state</p>';
+        });
+        
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        // Update test results
+        function updateTestResult(index, status) {
+            const results = document.querySelectorAll('.test-result-item');
+            if (results[index]) {
+                const icon = results[index].querySelector('.result-icon');
+                const text = results[index].querySelector('span');
+                
+                icon.className = `result-icon ${status}`;
+                icon.textContent = status === 'pass' ? '✓' : status === 'fail' ? '✗' : '?';
+                
+                const currentText = text.textContent;
+                text.textContent = currentText.replace('Pending', status === 'pass' ? 'Passed' : 'Failed');
+            }
+        }
+        
+        // Make functions available globally for testing
+        window.showNotification = showNotification;
+        window.updateTestResult = updateTestResult;
+    </script>
+</body>
+</html>

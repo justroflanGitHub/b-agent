@@ -58,6 +58,7 @@ def main():
             print(f"    - Search & Research: {url}/search_research/")
             print(f"    - Workflow:          {url}/workflow_automation/")
             print(f"    - E-commerce:        {url}/ecommerce/")
+            print(f"    - UI Testing:        {url}/ui_testing/")
             print("\n  Press Ctrl+C to stop")
             print("=" * 60 + "\n")
             httpd.serve_forever()

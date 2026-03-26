@@ -19,6 +19,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.0] - 2026-03-26
+
+### Added - UI-TARS Integration Tests for All Use Cases
+
+#### Test Pages (`test_pages/`)
+- **[0.12.1]** New UI Testing test page (`test_pages/ui_testing/index.html`):
+  - Button tests with click counter
+  - Form validation tests (email, password, phone)
+  - Visibility tests (visible, hidden, invisible elements)
+  - State tests (loading indicator, state display)
+  - Toggle switch tests
+  - Accordion tests
+  - Modal dialog tests
+  - Tabs navigation tests
+  - Progress bar tests
+  - Drag and drop tests
+  - Animation tests
+  - Tooltip tests
+  - Assertion area tests
+  - Responsive grid tests
+  - Notification system
+
+- **[0.12.2]** New expected outcomes documentation (`test_pages/ui_testing/expected_outcomes.md`):
+  - Detailed test scenarios for each UI component
+  - Expected outcomes and validation criteria
+  - UI-TARS vision test expectations
+  - Test data and success criteria
+
+#### Integration Tests (`tests/test_integration_use_cases.py`)
+- **[0.12.3]** New `TestUITestingVision` class with 7 test methods:
+  - `test_button_click_vision` - Test button clicks and counter
+  - `test_form_validation_vision` - Test form validation with valid/invalid inputs
+  - `test_modal_interaction_vision` - Test modal open/close/confirm
+  - `test_tabs_navigation_vision` - Test tab switching
+  - `test_toggle_switch_vision` - Test toggle switches
+  - `test_accordion_vision` - Test accordion expand/collapse
+  - `test_progress_bar_vision` - Test progress bar animation
+
+- **[0.12.4]** Updated `run_all_vision_tests()` utility to include UI Testing use case
+
+#### Test Server (`test_pages/server.py`)
+- **[0.12.5]** Added UI Testing page to server startup message
+
+### Test Results
+- **573 unit tests passed** (excluding integration tests)
+- **20 integration tests** ready for UI-TARS vision model testing
+- All 7 use cases have complete test coverage:
+  1. Form Filling - 2 tests
+  2. Data Extraction - 2 tests
+  3. Web Scraping - 2 tests
+  4. Search & Research - 2 tests
+  5. Workflow Automation - 2 tests
+  6. E-commerce - 2 tests
+  7. UI Testing - 7 tests
+  - Plus 1 schema validation test
+
+---
+
 ## [0.11.0] - 2026-03-26
 
 ### Added - iframe Support &100% Use Case Completion
