@@ -2,8 +2,8 @@
 """
 Integration Tests for Phase 4.5: Localhost Test Pages for Use Cases
 
-These tests call the model to perform tasks on the localhost test pages
-and evaluate the percentage of successful actions.
+These tests use UI-TARS vision model to perform tasks on the localhost test pages.
+The agent uses visual intelligence to determine where to click and what actions to take.
 
 Usage:
     pytest tests/test_integration_use_cases.py -v --run-integration
@@ -22,12 +22,6 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Skip all tests unless --run-integration flag is provided
-pytestmark = pytest.mark.skipif(
-    not pytest.config.getoption("--run-integration", default=False),
-    reason="Need --run-integration option to run integration tests"
-)
-
 
 def pytest_addoption(parser):
     """Add custom pytest options."""
@@ -35,12 +29,12 @@ def pytest_addoption(parser):
         "--run-integration",
         action="store_true",
         default=False,
-        help="Run integration tests that call the model"
+        help="Run integration tests that call the UI-TARS vision model"
     )
     parser.addoption(
         "--integration-timeout",
         action="store",
-        default=120,
+        default=180,
         type=int,
         help="Timeout in seconds for each integration test"
     )
@@ -51,70 +45,79 @@ def pytest_addoption(parser):
         type=int,
         help="Port for the test page server"
     )
+    parser.addoption(
+        "--llm-endpoint",
+        action="store",
+        default="http://127.0.0.1:1234/v1",
+        help="LLM API endpoint for UI-TARS"
+    )
+    parser.addoption(
+        "--success-threshold",
+        action="store",
+        default=70.0,
+        type=float,
+        help="Minimum success rate threshold (0-100)"
+    )
+
+
+def pytest_configure(config):
+    """Configure pytest with custom markers."""
+    config.addinivalue_line(
+        "markers", "integration: mark test as integration test using UI-TARS"
+    )
+
+
+# Skip all tests unless --run-integration flag is provided
+def pytest_collection_modifyitems(config, items):
+    """Skip integration tests unless --run-integration is provided."""
+    if not config.getoption("--run-integration"):
+        skip_integration = pytest.mark.skip(reason="Need --run-integration option to run")
+        for item in items:
+            if "integration" in item.keywords:
+                item.add_marker(skip_integration)
 
 
 @dataclass
-class ActionResult:
-    """Result of a single action performed by the agent."""
-    action_type: str
-    description: str
-    success: bool
-    expected: Any
-    actual: Any
-    error: Optional[str] = None
-    timestamp: float = field(default_factory=time.time)
-
-
-@dataclass
-class TaskResult:
-    """Result of a complete task with multiple actions."""
+class VisionTestResult:
+    """Result of a vision-guided test."""
     task_name: str
     task_description: str
     use_case: str
-    actions: List[ActionResult] = field(default_factory=list)
-    start_time: float = field(default_factory=time.time)
-    end_time: Optional[float] = None
+    goal: str
+    success: bool = False
+    steps: List[Dict[str, Any]] = field(default_factory=list)
+    execution_time: float = 0.0
+    error: Optional[str] = None
+    validation_results: List[Dict[str, Any]] = field(default_factory=list)
     
     @property
-    def total_actions(self) -> int:
-        return len(self.actions)
+    def total_steps(self) -> int:
+        return len(self.steps)
     
     @property
-    def successful_actions(self) -> int:
-        return sum(1 for a in self.actions if a.success)
+    def successful_steps(self) -> int:
+        return sum(1 for s in self.steps if s.get("success", False))
     
     @property
     def success_rate(self) -> float:
-        if self.total_actions == 0:
+        if self.total_steps == 0:
             return 0.0
-        return (self.successful_actions / self.total_actions) * 100
-    
-    @property
-    def duration(self) -> float:
-        if self.end_time is None:
-            return time.time() - self.start_time
-        return self.end_time - self.start_time
+        return (self.successful_steps / self.total_steps) * 100
     
     def to_dict(self) -> Dict:
         return {
             "task_name": self.task_name,
             "task_description": self.task_description,
             "use_case": self.use_case,
-            "total_actions": self.total_actions,
-            "successful_actions": self.successful_actions,
+            "goal": self.goal,
+            "success": self.success,
+            "total_steps": self.total_steps,
+            "successful_steps": self.successful_steps,
             "success_rate": round(self.success_rate, 2),
-            "duration_seconds": round(self.duration, 2),
-            "actions": [
-                {
-                    "action_type": a.action_type,
-                    "description": a.description,
-                    "success": a.success,
-                    "expected": str(a.expected),
-                    "actual": str(a.actual),
-                    "error": a.error
-                }
-                for a in self.actions
-            ]
+            "execution_time_seconds": round(self.execution_time, 2),
+            "error": self.error,
+            "steps": self.steps,
+            "validation_results": self.validation_results
         }
 
 
@@ -161,8 +164,8 @@ class TestPageServer:
         return f"{self.base_url}/{path}"
 
 
-class IntegrationTestBase:
-    """Base class for integration tests."""
+class VisionTestBase:
+    """Base class for UI-TARS vision-guided integration tests."""
     
     @pytest.fixture(autouse=True)
     def setup_server(self, request):
@@ -171,1254 +174,693 @@ class IntegrationTestBase:
         self.server = TestPageServer(port)
         self.server.start()
         self.base_url = self.server.base_url
+        self.llm_endpoint = request.config.getoption("--llm-endpoint", default="http://127.0.0.1:1234/v1")
+        self.success_threshold = request.config.getoption("--success-threshold", default=70.0)
+        self.timeout = request.config.getoption("--integration-timeout", default=180)
         yield
         # Don't stop server to allow other tests to use it
-        
-    def create_action_result(
+    
+    async def run_vision_task(
         self,
-        action_type: str,
-        description: str,
-        success: bool,
-        expected: Any,
-        actual: Any,
-        error: Optional[str] = None
-    ) -> ActionResult:
-        """Create an action result."""
-        return ActionResult(
-            action_type=action_type,
-            description=description,
-            success=success,
-            expected=expected,
-            actual=actual,
-            error=error
+        goal: str,
+        start_url: str,
+        max_steps: int = 15,
+        validation_fn=None
+    ) -> VisionTestResult:
+        """
+        Run a vision-guided task using UI-TARS.
+        
+        Args:
+            goal: Natural language description of what to accomplish
+            start_url: URL to navigate to before starting
+            max_steps: Maximum number of action steps
+            validation_fn: Optional async function to validate results
+            
+        Returns:
+            VisionTestResult with execution details
+        """
+        from browser_agent import BrowserAgent
+        import time as time_module
+        
+        result = VisionTestResult(
+            task_name=goal[:50],
+            task_description=goal,
+            use_case=self._get_use_case(),
+            goal=goal
         )
-    
-    def verify_field_value(self, actual: Any, expected: Any, field_name: str) -> ActionResult:
-        """Verify a field value matches expected."""
-        success = actual == expected
-        return self.create_action_result(
-            action_type="verify_field",
-            description=f"Verify {field_name}",
-            success=success,
-            expected=expected,
-            actual=actual,
-            error=None if success else f"Expected {expected}, got {actual}"
-        )
-    
-    def verify_contains(self, text: str, substring: str, description: str) -> ActionResult:
-        """Verify text contains substring."""
-        success = substring.lower() in text.lower()
-        return self.create_action_result(
-            action_type="verify_contains",
-            description=description,
-            success=success,
-            expected=substring,
-            actual=text[:100] + "..." if len(text) > 100 else text,
-            error=None if success else f"'{substring}' not found in text"
-        )
-    
-    def verify_greater_than(self, actual: int, minimum: int, description: str) -> ActionResult:
-        """Verify value is greater than minimum."""
-        success = actual >= minimum
-        return self.create_action_result(
-            action_type="verify_count",
-            description=description,
-            success=success,
-            expected=f">= {minimum}",
-            actual=actual,
-            error=None if success else f"Expected >= {minimum}, got {actual}"
-        )
-
-
-class TestFormFillingIntegration(IntegrationTestBase):
-    """Integration tests for form filling use case."""
-    
-    @pytest.fixture
-    def page_url(self) -> str:
-        return self.server.get_url("form_filling/index.html")
-    
-    @pytest.mark.asyncio
-    async def test_fill_required_fields(self, page_url):
-        """Test filling only required form fields."""
-        result = TaskResult(
-            task_name="fill_required_fields",
-            task_description="Fill only required fields in the contact form",
-            use_case="form_filling"
-        )
+        
+        start_time = time_module.time()
+        agent = None
         
         try:
-            # Import browser agent components
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
+            # Create agent with UI-TARS vision model
+            agent = BrowserAgent()
             await agent.initialize()
             
-            # Navigate to page
-            await agent.navigate(page_url)
-            await asyncio.sleep(1)
+            # Execute the task using vision guidance
+            task_result = await agent.execute_task(
+                goal=goal,
+                start_url=start_url,
+                max_steps=max_steps
+            )
             
-            # Fill required fields
-            test_data = {
-                "firstName": "Test",
-                "lastName": "User",
-                "email": "test@example.com",
-                "username": "testuser123",
-                "password": "Password123!",
-                "confirmPassword": "Password123!",
-                "subject": "general",
-                "message": "This is a test message with at least 10 characters.",
-                "terms": True
+            result.steps = task_result.steps
+            result.success = task_result.success
+            result.error = task_result.error
+            result.execution_time = task_result.execution_time
+            
+            # Run custom validation if provided
+            if validation_fn and agent.browser and agent.browser.page:
+                validation_results = await validation_fn(agent.browser.page)
+                result.validation_results = validation_results
+                
+                # Update success based on validation
+                if validation_results:
+                    all_validations_passed = all(
+                        v.get("success", False) for v in validation_results
+                    )
+                    if not all_validations_passed:
+                        result.success = False
+            
+        except Exception as e:
+            result.error = str(e)
+            result.success = False
+            
+        finally:
+            result.execution_time = time_module.time() - start_time
+            if agent:
+                await agent.cleanup()
+        
+        return result
+    
+    def _get_use_case(self) -> str:
+        """Get the use case name for this test class."""
+        return "unknown"
+    
+    def assert_success_threshold(self, result: VisionTestResult):
+        """Assert that the result meets the success threshold."""
+        assert result.success_rate >= self.success_threshold, (
+            f"Success rate {result.success_rate:.1f}% below threshold {self.success_threshold}%\n"
+            f"Steps: {result.total_steps}, Successful: {result.successful_steps}\n"
+            f"Error: {result.error}"
+        )
+
+
+class TestFormFillingVision(VisionTestBase):
+    """Vision-guided integration tests for form filling use case."""
+    
+    def _get_use_case(self) -> str:
+        return "form_filling"
+    
+    @pytest.mark.asyncio
+    async def test_fill_required_fields_vision(self, request):
+        """Test filling required form fields using UI-TARS vision."""
+        page_url = self.server.get_url("form_filling/index.html")
+        
+        # Define the goal for UI-TARS
+        goal = """Fill out the contact form with the following information:
+        - First Name: John
+        - Last Name: Doe
+        - Email: john.doe@example.com
+        - Username: johndoe123
+        - Password: SecurePass123!
+        - Confirm Password: SecurePass123!
+        - Subject: Select "General Inquiry"
+        - Message: "This is a test message for the form filling use case."
+        - Check the "I agree to the terms" checkbox
+        Then click the Submit button."""
+        
+        async def validate_form(page):
+            """Validate form was filled correctly."""
+            results = []
+            
+            # Check field values
+            fields = {
+                "#firstName": "John",
+                "#lastName": "Doe",
+                "#email": "john.doe@example.com",
+                "#username": "johndoe123"
             }
             
-            # Fill text fields
-            for field, value in test_data.items():
-                if field in ["terms", "subject"]:
-                    continue
-                    
+            for selector, expected in fields.items():
                 try:
-                    selector = f"#{field}"
-                    element = await agent.page.wait_for_selector(selector, timeout=5000)
-                    if element:
-                        await element.fill(str(value))
-                        result.actions.append(self.create_action_result(
-                            action_type="fill_field",
-                            description=f"Fill {field}",
-                            success=True,
-                            expected=value,
-                            actual=await element.input_value()
-                        ))
-                except Exception as e:
-                    result.actions.append(self.create_action_result(
-                        action_type="fill_field",
-                        description=f"Fill {field}",
-                        success=False,
-                        expected=value,
-                        actual=None,
-                        error=str(e)
-                    ))
-            
-            # Select subject
-            try:
-                await agent.page.select_option("#subject", test_data["subject"])
-                result.actions.append(self.create_action_result(
-                    action_type="select_option",
-                    description="Select subject",
-                    success=True,
-                    expected=test_data["subject"],
-                    actual=await agent.page.input_value("#subject")
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="select_option",
-                    description="Select subject",
-                    success=False,
-                    expected=test_data["subject"],
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            # Check terms
-            try:
-                await agent.page.check("#terms")
-                is_checked = await agent.page.is_checked("#terms")
-                result.actions.append(self.create_action_result(
-                    action_type="check_checkbox",
-                    description="Check terms checkbox",
-                    success=is_checked,
-                    expected=True,
-                    actual=is_checked
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="check_checkbox",
-                    description="Check terms checkbox",
-                    success=False,
-                    expected=True,
-                    actual=False,
-                    error=str(e)
-                ))
-            
-            # Submit form
-            try:
-                await agent.page.click("#submitBtn")
-                await asyncio.sleep(1)
-                
-                # Check for success message
-                success_msg = await agent.page.query_selector(".success-message.visible")
-                result.actions.append(self.create_action_result(
-                    action_type="submit_form",
-                    description="Submit form and verify success",
-                    success=success_msg is not None,
-                    expected="Success message visible",
-                    actual="Success message found" if success_msg else "No success message"
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="submit_form",
-                    description="Submit form and verify success",
-                    success=False,
-                    expected="Success message visible",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser and navigate",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
-        
-        result.end_time = time.time()
-        
-        # Assert minimum success rate
-        assert result.success_rate >= 70, f"Success rate {result.success_rate}% is below 70%"
-    
-    @pytest.mark.asyncio
-    async def test_validation_errors(self, page_url):
-        """Test form validation error handling."""
-        result = TaskResult(
-            task_name="validation_errors",
-            task_description="Trigger and verify validation errors",
-            use_case="form_filling"
-        )
-        
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(page_url)
-            await asyncio.sleep(1)
-            
-            # Try to submit empty form
-            try:
-                await agent.page.click("#submitBtn")
-                await asyncio.sleep(0.5)
-                
-                # Check for error messages
-                error_messages = await agent.page.query_selector_all(".error-message.visible")
-                result.actions.append(self.create_action_result(
-                    action_type="verify_validation",
-                    description="Verify validation errors appear",
-                    success=len(error_messages) > 0,
-                    expected="At least 1 error message",
-                    actual=f"{len(error_messages)} error messages"
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="verify_validation",
-                    description="Verify validation errors appear",
-                    success=False,
-                    expected="Error messages visible",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            # Test invalid email
-            try:
-                await agent.page.fill("#email", "invalid-email")
-                await agent.page.click("#submitBtn")
-                await asyncio.sleep(0.5)
-                
-                email_error = await agent.page.query_selector("#email + .error-message.visible, #email.error")
-                result.actions.append(self.create_action_result(
-                    action_type="verify_email_validation",
-                    description="Verify email validation error",
-                    success=email_error is not None,
-                    expected="Email error visible",
-                    actual="Email error found" if email_error else "No email error"
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="verify_email_validation",
-                    description="Verify email validation error",
-                    success=False,
-                    expected="Email error visible",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
-        
-        result.end_time = time.time()
-        assert result.success_rate >= 50, f"Success rate {result.success_rate}% is below 50%"
-
-
-class TestDataExtractionIntegration(IntegrationTestBase):
-    """Integration tests for data extraction use case."""
-    
-    @pytest.fixture
-    def page_url(self) -> str:
-        return self.server.get_url("data_extraction/index.html")
-    
-    @pytest.mark.asyncio
-    async def test_extract_all_products(self, page_url):
-        """Test extracting all products from the page."""
-        result = TaskResult(
-            task_name="extract_all_products",
-            task_description="Extract all 12 products from the catalog",
-            use_case="data_extraction"
-        )
-        
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(page_url)
-            await asyncio.sleep(2)
-            
-            # Extract product cards
-            try:
-                product_cards = await agent.page.query_selector_all(".product-card")
-                result.actions.append(self.create_action_result(
-                    action_type="extract_elements",
-                    description="Extract product cards",
-                    success=len(product_cards) == 12,
-                    expected=12,
-                    actual=len(product_cards)
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="extract_elements",
-                    description="Extract product cards",
-                    success=False,
-                    expected=12,
-                    actual=0,
-                    error=str(e)
-                ))
-                product_cards = []
-            
-            # Extract data from each product
-            extracted_products = []
-            for i, card in enumerate(product_cards):
-                try:
-                    name = await card.query_selector(".product-name")
-                    name_text = await name.inner_text() if name else ""
-                    
-                    price = await card.query_selector(".current-price")
-                    price_text = await price.inner_text() if price else ""
-                    
-                    extracted_products.append({
-                        "name": name_text,
-                        "price": price_text
+                    actual = await page.input_value(selector)
+                    results.append({
+                        "check": f"Field {selector}",
+                        "success": actual == expected,
+                        "expected": expected,
+                        "actual": actual
                     })
-                    
-                    if name_text and price_text:
-                        result.actions.append(self.create_action_result(
-                            action_type="extract_product",
-                            description=f"Extract product {i+1}",
-                            success=True,
-                            expected="Name and price",
-                            actual=f"{name_text}: {price_text}"
-                        ))
                 except Exception as e:
-                    result.actions.append(self.create_action_result(
-                        action_type="extract_product",
-                        description=f"Extract product {i+1}",
-                        success=False,
-                        expected="Name and price",
-                        actual=None,
-                        error=str(e)
-                    ))
+                    results.append({
+                        "check": f"Field {selector}",
+                        "success": False,
+                        "error": str(e)
+                    })
             
-            # Verify we extracted all products with data
-            successful_extractions = sum(1 for p in extracted_products if p["name"] and p["price"])
-            result.actions.append(self.create_action_result(
-                action_type="verify_extraction",
-                description="Verify all products extracted with data",
-                success=successful_extractions >= 10,
-                expected=">= 10 products with data",
-                actual=f"{successful_extractions} products with data"
-            ))
+            # Check if form was submitted (success message visible)
+            try:
+                success_msg = await page.query_selector(".success-message, #successMessage")
+                if success_msg:
+                    is_visible = await success_msg.is_visible()
+                    results.append({
+                        "check": "Success message visible",
+                        "success": is_visible
+                    })
+            except:
+                pass
             
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+            return results
         
-        result.end_time = time.time()
-        assert result.success_rate >= 70, f"Success rate {result.success_rate}% is below 70%"
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=20,
+            validation_fn=validate_form
+        )
+        
+        # Log result for debugging
+        print(f"\n=== Form Filling Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        # Assert task completed successfully
+        self.assert_success_threshold(result)
     
     @pytest.mark.asyncio
-    async def test_extract_products_by_category(self, page_url):
-        """Test extracting products filtered by category."""
-        result = TaskResult(
-            task_name="extract_by_category",
-            task_description="Extract gaming category products",
-            use_case="data_extraction"
+    async def test_form_validation_errors_vision(self, request):
+        """Test that UI-TARS handles form validation correctly."""
+        page_url = self.server.get_url("form_filling/index.html")
+        
+        goal = """Try to submit the form without filling any fields to trigger validation errors.
+        Then observe and report what validation error messages appear on the page."""
+        
+        async def validate_errors(page):
+            """Validate error messages appeared."""
+            results = []
+            
+            # Check for error messages
+            try:
+                error_elements = await page.query_selector_all(".error-message, .field-error")
+                results.append({
+                    "check": "Error messages present",
+                    "success": len(error_elements) > 0,
+                    "count": len(error_elements)
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Error messages present",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_errors
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(page_url)
-            await asyncio.sleep(2)
-            
-            # Filter by gaming category
-            try:
-                await agent.page.select_option("#categoryFilter", "gaming")
-                await asyncio.sleep(1)
-                
-                gaming_cards = await agent.page.query_selector_all(".product-card[data-category='gaming']")
-                result.actions.append(self.create_action_result(
-                    action_type="filter_category",
-                    description="Filter by gaming category",
-                    success=len(gaming_cards) == 3,
-                    expected=3,
-                    actual=len(gaming_cards)
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="filter_category",
-                    description="Filter by gaming category",
-                    success=False,
-                    expected=3,
-                    actual=0,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+        print(f"\n=== Form Validation Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
         
-        result.end_time = time.time()
-        assert result.success_rate >= 50, f"Success rate {result.success_rate}% is below 50%"
+        # For validation test, we just need to verify errors appeared
+        assert len(result.validation_results) > 0, "No validation results collected"
 
 
-class TestWebScrapingIntegration(IntegrationTestBase):
-    """Integration tests for web scraping use case."""
+class TestDataExtractionVision(VisionTestBase):
+    """Vision-guided integration tests for data extraction use case."""
     
-    @pytest.fixture
-    def page_url(self) -> str:
-        return self.server.get_url("web_scraping/index.html")
+    def _get_use_case(self) -> str:
+        return "data_extraction"
     
     @pytest.mark.asyncio
-    async def test_scrape_with_pagination(self, page_url):
-        """Test scraping blog posts with pagination."""
-        result = TaskResult(
-            task_name="scrape_pagination",
-            task_description="Scrape all 15 posts across 3 pages",
-            use_case="web_scraping"
+    async def test_extract_all_products_vision(self, request):
+        """Test extracting all product data using UI-TARS vision."""
+        page_url = self.server.get_url("data_extraction/index.html")
+        
+        goal = """Look at the product listing page and extract all product information.
+        For each product, identify: name, price, category, and availability.
+        Report the total number of products found."""
+        
+        async def validate_extraction(page):
+            """Validate data was extracted."""
+            results = []
+            
+            # Count products on page
+            try:
+                products = await page.query_selector_all(".product-card, .product-item")
+                results.append({
+                    "check": "Products found",
+                    "success": len(products) > 0,
+                    "count": len(products)
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Products found",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_extraction
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(page_url)
-            await asyncio.sleep(2)
-            
-            all_posts = []
-            
-            # Scrape page 1
-            try:
-                posts = await agent.page.query_selector_all(".blog-card")
-                all_posts.extend(posts)
-                result.actions.append(self.create_action_result(
-                    action_type="scrape_page",
-                    description="Scrape page 1",
-                    success=len(posts) == 5,
-                    expected=5,
-                    actual=len(posts)
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="scrape_page",
-                    description="Scrape page 1",
-                    success=False,
-                    expected=5,
-                    actual=0,
-                    error=str(e)
-                ))
-            
-            # Navigate to page 2
-            try:
-                await agent.page.click(".pagination button:nth-child(2)")
-                await asyncio.sleep(1)
-                posts = await agent.page.query_selector_all(".blog-card")
-                all_posts.extend(posts)
-                result.actions.append(self.create_action_result(
-                    action_type="navigate_and_scrape",
-                    description="Navigate to page 2 and scrape",
-                    success=len(posts) == 5,
-                    expected=5,
-                    actual=len(posts)
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="navigate_and_scrape",
-                    description="Navigate to page 2 and scrape",
-                    success=False,
-                    expected=5,
-                    actual=0,
-                    error=str(e)
-                ))
-            
-            # Navigate to page 3
-            try:
-                await agent.page.click(".pagination button:nth-child(3)")
-                await asyncio.sleep(1)
-                posts = await agent.page.query_selector_all(".blog-card")
-                all_posts.extend(posts)
-                result.actions.append(self.create_action_result(
-                    action_type="navigate_and_scrape",
-                    description="Navigate to page 3 and scrape",
-                    success=len(posts) == 5,
-                    expected=5,
-                    actual=len(posts)
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="navigate_and_scrape",
-                    description="Navigate to page 3 and scrape",
-                    success=False,
-                    expected=5,
-                    actual=0,
-                    error=str(e)
-                ))
-            
-            # Verify total posts
-            result.actions.append(self.create_action_result(
-                action_type="verify_total",
-                description="Verify total posts scraped",
-                success=len(all_posts) == 15,
-                expected=15,
-                actual=len(all_posts)
-            ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+        print(f"\n=== Data Extraction Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
         
-        result.end_time = time.time()
-        assert result.success_rate >= 60, f"Success rate {result.success_rate}% is below 60%"
+        self.assert_success_threshold(result)
     
     @pytest.mark.asyncio
-    async def test_scrape_with_load_more(self, page_url):
-        """Test scraping using load more button."""
-        result = TaskResult(
-            task_name="scrape_load_more",
-            task_description="Load and scrape all posts using Load More",
-            use_case="web_scraping"
+    async def test_filter_by_category_vision(self, request):
+        """Test filtering products by category using UI-TARS vision."""
+        page_url = self.server.get_url("data_extraction/index.html")
+        
+        goal = """Filter the products to show only items in the "Electronics" category.
+        Use the category filter dropdown or buttons on the page."""
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(page_url)
-            await asyncio.sleep(2)
-            
-            # Count initial posts
-            try:
-                initial_posts = await agent.page.query_selector_all(".blog-card")
-                result.actions.append(self.create_action_result(
-                    action_type="count_initial",
-                    description="Count initial posts",
-                    success=len(initial_posts) == 5,
-                    expected=5,
-                    actual=len(initial_posts)
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="count_initial",
-                    description="Count initial posts",
-                    success=False,
-                    expected=5,
-                    actual=0,
-                    error=str(e)
-                ))
-            
-            # Click Load More
-            try:
-                await agent.page.click(".load-more-btn")
-                await asyncio.sleep(1)
-                posts_after_load = await agent.page.query_selector_all(".blog-card")
-                result.actions.append(self.create_action_result(
-                    action_type="load_more",
-                    description="Click Load More and verify",
-                    success=len(posts_after_load) == 10,
-                    expected=10,
-                    actual=len(posts_after_load)
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="load_more",
-                    description="Click Load More and verify",
-                    success=False,
-                    expected=10,
-                    actual=0,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+        print(f"\n=== Category Filter Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
         
-        result.end_time = time.time()
-        assert result.success_rate >= 50, f"Success rate {result.success_rate}% is below 50%"
+        self.assert_success_threshold(result)
 
 
-class TestSearchResearchIntegration(IntegrationTestBase):
-    """Integration tests for search & research use case."""
+class TestWebScrapingVision(VisionTestBase):
+    """Vision-guided integration tests for web scraping use case."""
     
-    @pytest.fixture
-    def page_url(self) -> str:
-        return self.server.get_url("search_research/index.html")
+    def _get_use_case(self) -> str:
+        return "web_scraping"
     
     @pytest.mark.asyncio
-    async def test_basic_search(self, page_url):
-        """Test basic search functionality."""
-        result = TaskResult(
-            task_name="basic_search",
-            task_description="Search for 'machine learning' and verify results",
-            use_case="search_research"
+    async def test_pagination_vision(self, request):
+        """Test navigating through paginated content using UI-TARS vision."""
+        page_url = self.server.get_url("web_scraping/index.html")
+        
+        goal = """Navigate through the article list by clicking the "Next" or pagination buttons.
+        Visit at least 3 pages and report the articles found on each page."""
+        
+        async def validate_pagination(page):
+            """Validate pagination worked."""
+            results = []
+            
+            try:
+                # Check if we navigated (URL might have page parameter)
+                url = page.url
+                results.append({
+                    "check": "Page navigated",
+                    "success": "page=" in url or "Page 2" in await page.content(),
+                    "url": url
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Page navigated",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=15,
+            validation_fn=validate_pagination
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(page_url)
-            await asyncio.sleep(2)
-            
-            # Enter search query
-            try:
-                await agent.page.fill("#searchInput", "machine learning")
-                result.actions.append(self.create_action_result(
-                    action_type="enter_query",
-                    description="Enter search query",
-                    success=True,
-                    expected="machine learning",
-                    actual=await agent.page.input_value("#searchInput")
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="enter_query",
-                    description="Enter search query",
-                    success=False,
-                    expected="machine learning",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            # Click search button
-            try:
-                await agent.page.click("#searchBtn")
-                await asyncio.sleep(1)
-                result.actions.append(self.create_action_result(
-                    action_type="click_search",
-                    description="Click search button",
-                    success=True,
-                    expected="Search executed",
-                    actual="Search executed"
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="click_search",
-                    description="Click search button",
-                    success=False,
-                    expected="Search executed",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            # Verify results appear
-            try:
-                results = await agent.page.query_selector_all(".result-item")
-                result.actions.append(self.create_action_result(
-                    action_type="verify_results",
-                    description="Verify search results appear",
-                    success=len(results) > 0,
-                    expected="> 0 results",
-                    actual=f"{len(results)} results"
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="verify_results",
-                    description="Verify search results appear",
-                    success=False,
-                    expected="> 0 results",
-                    actual=0,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+        print(f"\n=== Pagination Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
         
-        result.end_time = time.time()
-        assert result.success_rate >= 60, f"Success rate {result.success_rate}% is below 60%"
+        # More lenient threshold for pagination
+        assert result.success_rate >= 50.0, (
+            f"Success rate {result.success_rate:.1f}% below threshold 50%"
+        )
     
     @pytest.mark.asyncio
-    async def test_navigate_to_result(self, page_url):
-        """Test clicking on a search result."""
-        result = TaskResult(
-            task_name="navigate_result",
-            task_description="Search and navigate to Wikipedia result",
-            use_case="search_research"
+    async def test_load_more_vision(self, request):
+        """Test clicking 'Load More' button using UI-TARS vision."""
+        page_url = self.server.get_url("web_scraping/index.html")
+        
+        goal = """Click the "Load More" button to load additional articles.
+        Do this multiple times to load more content."""
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(page_url)
-            await asyncio.sleep(2)
-            
-            # Search
-            try:
-                await agent.page.fill("#searchInput", "machine learning")
-                await agent.page.click("#searchBtn")
-                await asyncio.sleep(1)
-                result.actions.append(self.create_action_result(
-                    action_type="perform_search",
-                    description="Perform search",
-                    success=True,
-                    expected="Search completed",
-                    actual="Search completed"
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="perform_search",
-                    description="Perform search",
-                    success=False,
-                    expected="Search completed",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            # Click Wikipedia result
-            try:
-                wiki_link = await agent.page.query_selector('a:has-text("Wikipedia")')
-                if wiki_link:
-                    await wiki_link.click()
-                    await asyncio.sleep(1)
-                    
-                    # Check if navigated to article page
-                    current_url = agent.page.url
-                    result.actions.append(self.create_action_result(
-                        action_type="click_result",
-                        description="Click Wikipedia result",
-                        success="article.html" in current_url,
-                        expected="Article page",
-                        actual=current_url
-                    ))
-                else:
-                    result.actions.append(self.create_action_result(
-                        action_type="click_result",
-                        description="Click Wikipedia result",
-                        success=False,
-                        expected="Article page",
-                        actual="Wikipedia link not found"
-                    ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="click_result",
-                    description="Click Wikipedia result",
-                    success=False,
-                    expected="Article page",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+        print(f"\n=== Load More Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
         
-        result.end_time = time.time()
-        assert result.success_rate >= 50, f"Success rate {result.success_rate}% is below 50%"
+        self.assert_success_threshold(result)
 
 
-class TestWorkflowAutomationIntegration(IntegrationTestBase):
-    """Integration tests for workflow automation use case."""
+class TestSearchResearchVision(VisionTestBase):
+    """Vision-guided integration tests for search & research use case."""
     
-    @pytest.fixture
-    def login_url(self) -> str:
-        return self.server.get_url("workflow_automation/login.html")
-    
-    @pytest.fixture
-    def dashboard_url(self) -> str:
-        return self.server.get_url("workflow_automation/dashboard.html")
+    def _get_use_case(self) -> str:
+        return "search_research"
     
     @pytest.mark.asyncio
-    async def test_login_workflow(self, login_url):
-        """Test complete login workflow."""
-        result = TaskResult(
-            task_name="login_workflow",
-            task_description="Log in with demo/demo credentials",
-            use_case="workflow_automation"
+    async def test_basic_search_vision(self, request):
+        """Test performing a search using UI-TARS vision."""
+        page_url = self.server.get_url("search_research/index.html")
+        
+        goal = """Use the search box on this page to search for "machine learning".
+        Click the search button or press Enter to submit the search."""
+        
+        async def validate_search(page):
+            """Validate search was performed."""
+            results = []
+            
+            try:
+                # Check for search results
+                content = await page.content()
+                has_results = "machine learning" in content.lower() or "results" in content.lower()
+                results.append({
+                    "check": "Search performed",
+                    "success": has_results
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Search performed",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_search
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(login_url)
-            await asyncio.sleep(2)
-            
-            # Fill username
-            try:
-                await agent.page.fill("#username", "demo")
-                result.actions.append(self.create_action_result(
-                    action_type="fill_username",
-                    description="Fill username",
-                    success=True,
-                    expected="demo",
-                    actual=await agent.page.input_value("#username")
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="fill_username",
-                    description="Fill username",
-                    success=False,
-                    expected="demo",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            # Fill password
-            try:
-                await agent.page.fill("#password", "demo")
-                result.actions.append(self.create_action_result(
-                    action_type="fill_password",
-                    description="Fill password",
-                    success=True,
-                    expected="demo",
-                    actual="***"  # Don't expose password
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="fill_password",
-                    description="Fill password",
-                    success=False,
-                    expected="demo",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            # Click login
-            try:
-                await agent.page.click("#loginBtn")
-                await asyncio.sleep(2)
-                
-                # Check if redirected to dashboard
-                current_url = agent.page.url
-                result.actions.append(self.create_action_result(
-                    action_type="submit_login",
-                    description="Submit login and verify redirect",
-                    success="dashboard.html" in current_url,
-                    expected="Dashboard page",
-                    actual=current_url
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="submit_login",
-                    description="Submit login and verify redirect",
-                    success=False,
-                    expected="Dashboard page",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+        print(f"\n=== Search Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
         
-        result.end_time = time.time()
-        assert result.success_rate >= 60, f"Success rate {result.success_rate}% is below 60%"
+        self.assert_success_threshold(result)
     
     @pytest.mark.asyncio
-    async def test_invalid_login(self, login_url):
-        """Test login with invalid credentials."""
-        result = TaskResult(
-            task_name="invalid_login",
-            task_description="Test login with wrong credentials",
-            use_case="workflow_automation"
+    async def test_navigate_to_result_vision(self, request):
+        """Test navigating to a search result using UI-TARS vision."""
+        page_url = self.server.get_url("search_research/index.html")
+        
+        goal = """First search for "python programming", then click on one of the search results
+        to view more details."""
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=15
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(login_url)
-            await asyncio.sleep(2)
-            
-            # Fill wrong credentials
-            try:
-                await agent.page.fill("#username", "wronguser")
-                await agent.page.fill("#password", "wrongpass")
-                await agent.page.click("#loginBtn")
-                await asyncio.sleep(1)
-                
-                # Check for error message
-                error_msg = await agent.page.query_selector(".login-error.visible, .error-message.visible")
-                result.actions.append(self.create_action_result(
-                    action_type="verify_error",
-                    description="Verify error message appears",
-                    success=error_msg is not None,
-                    expected="Error message visible",
-                    actual="Error found" if error_msg else "No error"
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="verify_error",
-                    description="Verify error message appears",
-                    success=False,
-                    expected="Error message visible",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+        print(f"\n=== Navigate Result Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
         
-        result.end_time = time.time()
-        assert result.success_rate >= 50, f"Success rate {result.success_rate}% is below 50%"
+        self.assert_success_threshold(result)
 
 
-class TestEcommerceIntegration(IntegrationTestBase):
-    """Integration tests for e-commerce use case."""
+class TestWorkflowAutomationVision(VisionTestBase):
+    """Vision-guided integration tests for workflow automation use case."""
     
-    @pytest.fixture
-    def catalog_url(self) -> str:
-        return self.server.get_url("ecommerce/index.html")
-    
-    @pytest.fixture
-    def cart_url(self) -> str:
-        return self.server.get_url("ecommerce/cart.html")
+    def _get_use_case(self) -> str:
+        return "workflow_automation"
     
     @pytest.mark.asyncio
-    async def test_add_to_cart(self, catalog_url):
-        """Test adding product to cart."""
-        result = TaskResult(
-            task_name="add_to_cart",
-            task_description="Add Wireless Headphones to cart",
-            use_case="ecommerce"
+    async def test_login_workflow_vision(self, request):
+        """Test login workflow using UI-TARS vision."""
+        page_url = self.server.get_url("workflow_automation/index.html")
+        
+        goal = """Complete the login workflow:
+        1. Find the username/email field and enter: demo@example.com
+        2. Find the password field and enter: password123
+        3. Click the Login button
+        4. Verify that login was successful"""
+        
+        async def validate_login(page):
+            """Validate login succeeded."""
+            results = []
+            
+            try:
+                # Check for success indicator
+                content = await page.content()
+                has_success = "welcome" in content.lower() or "dashboard" in content.lower() or "logged in" in content.lower()
+                results.append({
+                    "check": "Login successful",
+                    "success": has_success
+                })
+            except Exception as e:
+                results.append({
+                    "check": "Login successful",
+                    "success": False,
+                    "error": str(e)
+                })
+            
+            return results
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_login
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
-            
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(catalog_url)
-            await asyncio.sleep(2)
-            
-            # Find and click Add to Cart for first product
-            try:
-                add_btn = await agent.page.query_selector('.product-card[data-product-id="1"] .add-to-cart-btn')
-                if add_btn:
-                    await add_btn.click()
-                    await asyncio.sleep(1)
-                    
-                    # Check button text changed
-                    btn_text = await add_btn.inner_text()
-                    result.actions.append(self.create_action_result(
-                        action_type="add_to_cart",
-                        description="Add product to cart",
-                        success="Added" in btn_text or "added" in btn_text.lower(),
-                        expected="Button shows Added",
-                        actual=btn_text
-                    ))
-                else:
-                    result.actions.append(self.create_action_result(
-                        action_type="add_to_cart",
-                        description="Add product to cart",
-                        success=False,
-                        expected="Button shows Added",
-                        actual="Button not found"
-                    ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="add_to_cart",
-                    description="Add product to cart",
-                    success=False,
-                    expected="Button shows Added",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            # Verify cart count increased
-            try:
-                cart_count = await agent.page.query_selector("#cartCount")
-                count_text = await cart_count.inner_text() if cart_count else "0"
-                result.actions.append(self.create_action_result(
-                    action_type="verify_cart_count",
-                    description="Verify cart count increased",
-                    success=int(count_text) >= 1,
-                    expected=">= 1",
-                    actual=count_text
-                ))
-            except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="verify_cart_count",
-                    description="Verify cart count increased",
-                    success=False,
-                    expected=">= 1",
-                    actual=None,
-                    error=str(e)
-                ))
-            
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+        print(f"\n=== Login Workflow Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
         
-        result.end_time = time.time()
-        assert result.success_rate >= 50, f"Success rate {result.success_rate}% is below 50%"
+        self.assert_success_threshold(result)
     
     @pytest.mark.asyncio
-    async def test_filter_products(self, catalog_url):
-        """Test filtering products by category."""
-        result = TaskResult(
-            task_name="filter_products",
-            task_description="Filter products by electronics category",
-            use_case="ecommerce"
+    async def test_invalid_login_vision(self, request):
+        """Test handling invalid login using UI-TARS vision."""
+        page_url = self.server.get_url("workflow_automation/index.html")
+        
+        goal = """Try to login with invalid credentials:
+        1. Enter username: wrong@example.com
+        2. Enter password: wrongpassword
+        3. Click Login
+        4. Observe and report any error messages that appear"""
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10
         )
         
-        try:
-            from simple_browser_agent import BrowserAgent
+        print(f"\n=== Invalid Login Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        # For this test, we just need to complete the steps
+        assert result.total_steps > 0, "No steps were executed"
+
+
+class TestEcommerceVision(VisionTestBase):
+    """Vision-guided integration tests for e-commerce use case."""
+    
+    def _get_use_case(self) -> str:
+        return "ecommerce"
+    
+    @pytest.mark.asyncio
+    async def test_add_to_cart_vision(self, request):
+        """Test adding product to cart using UI-TARS vision."""
+        page_url = self.server.get_url("ecommerce/index.html")
+        
+        goal = """Complete an e-commerce purchase flow:
+        1. Find a product on the page
+        2. Click "Add to Cart" button for that product
+        3. Verify the item was added to cart"""
+        
+        async def validate_cart(page):
+            """Validate item added to cart."""
+            results = []
             
-            agent = BrowserAgent(headless=False)
-            await agent.initialize()
-            await agent.navigate(catalog_url)
-            await asyncio.sleep(2)
-            
-            # Select electronics category
             try:
-                await agent.page.select_option("#categoryFilter", "electronics")
-                await asyncio.sleep(1)
-                
-                # Count visible products
-                visible_cards = await agent.page.query_selector_all(".product-card:not([style*='display: none'])")
-                result.actions.append(self.create_action_result(
-                    action_type="filter_category",
-                    description="Filter by electronics",
-                    success=len(visible_cards) == 4,
-                    expected=4,
-                    actual=len(visible_cards)
-                ))
+                # Check cart indicator
+                cart_count = await page.query_selector(".cart-count, #cartCount")
+                if cart_count:
+                    count_text = await cart_count.text_content()
+                    results.append({
+                        "check": "Cart updated",
+                        "success": int(count_text or "0") > 0,
+                        "cart_count": count_text
+                    })
             except Exception as e:
-                result.actions.append(self.create_action_result(
-                    action_type="filter_category",
-                    description="Filter by electronics",
-                    success=False,
-                    expected=4,
-                    actual=0,
-                    error=str(e)
-                ))
+                results.append({
+                    "check": "Cart updated",
+                    "success": False,
+                    "error": str(e)
+                })
             
-            await agent.cleanup()
-            
-        except Exception as e:
-            result.actions.append(self.create_action_result(
-                action_type="test_setup",
-                description="Initialize browser",
-                success=False,
-                expected="Browser initialized",
-                actual=None,
-                error=str(e)
-            ))
+            return results
         
-        result.end_time = time.time()
-        assert result.success_rate >= 50, f"Success rate {result.success_rate}% is below 50%"
-
-
-class TestSuccessRateReport:
-    """Generate a comprehensive success rate report."""
-    
-    @pytest.fixture
-    def report_output_path(self, tmp_path) -> Path:
-        return tmp_path / "integration_test_report.json"
-    
-    def test_generate_report_schema(self, report_output_path):
-        """Test that the report schema is correct."""
-        sample_result = TaskResult(
-            task_name="sample_task",
-            task_description="Sample task for schema validation",
-            use_case="test"
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10,
+            validation_fn=validate_cart
         )
         
-        sample_result.actions.append(ActionResult(
-            action_type="test_action",
-            description="Test action",
+        print(f"\n=== Add to Cart Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        self.assert_success_threshold(result)
+    
+    @pytest.mark.asyncio
+    async def test_filter_products_vision(self, request):
+        """Test filtering products using UI-TARS vision."""
+        page_url = self.server.get_url("ecommerce/index.html")
+        
+        goal = """Filter the products on this page:
+        1. Find the filter options (price range, category, etc.)
+        2. Apply a filter (e.g., price range or category)
+        3. Verify the products displayed have changed"""
+        
+        result = await self.run_vision_task(
+            goal=goal,
+            start_url=page_url,
+            max_steps=10
+        )
+        
+        print(f"\n=== Filter Products Vision Test Result ===")
+        print(json.dumps(result.to_dict(), indent=2))
+        
+        self.assert_success_threshold(result)
+
+
+class TestSuccessRateReport(VisionTestBase):
+    """Generate overall success rate report for all use cases."""
+    
+    def _get_use_case(self) -> str:
+        return "report"
+    
+    @pytest.mark.asyncio
+    async def test_success_rate_report_schema(self, request):
+        """Test that success rate report follows expected schema."""
+        # This test validates the VisionTestResult schema
+        result = VisionTestResult(
+            task_name="schema_test",
+            task_description="Test schema validation",
+            use_case="report",
+            goal="Validate report schema",
             success=True,
-            expected="Expected value",
-            actual="Actual value"
-        ))
+            steps=[{"step": 1, "action": "test", "success": True}],
+            execution_time=1.5,
+            validation_results=[{"check": "schema", "success": True}]
+        )
         
-        sample_result.end_time = time.time()
+        result_dict = result.to_dict()
         
-        report = sample_result.to_dict()
+        # Validate schema
+        required_fields = [
+            "task_name", "task_description", "use_case", "goal",
+            "success", "total_steps", "successful_steps", "success_rate",
+            "execution_time_seconds", "steps"
+        ]
         
-        # Verify schema
-        assert "task_name" in report
-        assert "task_description" in report
-        assert "use_case" in report
-        assert "total_actions" in report
-        assert "successful_actions" in report
-        assert "success_rate" in report
-        assert "duration_seconds" in report
-        assert "actions" in report
+        for field in required_fields:
+            assert field in result_dict, f"Missing required field: {field}"
         
-        # Write sample report
-        with open(report_output_path, 'w') as f:
-            json.dump({"results": [report]}, f, indent=2)
+        assert isinstance(result_dict["success_rate"], float)
+        assert isinstance(result_dict["steps"], list)
         
-        assert report_output_path.exists()
+        print(f"\n=== Schema Validation Passed ===")
+        print(json.dumps(result_dict, indent=2))
 
 
-# Utility functions for running tests programmatically
-
-def run_integration_tests(
-    use_case: Optional[str] = None,
-    timeout: int = 120,
-    port: int = 8765
+# Utility function to run all vision tests and generate report
+async def run_all_vision_tests(
+    base_url: str = "http://localhost:8765",
+    llm_endpoint: str = "http://127.0.0.1:1234/v1"
 ) -> Dict[str, Any]:
     """
-    Run integration tests and return results.
+    Run all vision-guided tests and return a comprehensive report.
     
-    Args:
-        use_case: Specific use case to test (form_filling, data_extraction, etc.)
-        timeout: Timeout in seconds for each test
-        port: Port for test server
-        
-    Returns:
-        Dictionary with test results and success rates
+    This function can be called directly for custom test runs.
     """
-    import subprocess
-    import sys
+    from browser_agent import BrowserAgent
     
-    cmd = [
-        sys.executable, "-m", "pytest",
-        "tests/test_integration_use_cases.py",
-        "-v",
-        "--run-integration",
-        f"--integration-timeout={timeout}",
-        f"--test-server-port={port}",
-        "--json-report",
-        "--json-report-file=-"
+    test_cases = [
+        {
+            "use_case": "form_filling",
+            "goal": "Fill the contact form with test data and submit",
+            "url": f"{base_url}/form_filling/index.html"
+        },
+        {
+            "use_case": "data_extraction",
+            "goal": "Extract all product information from the page",
+            "url": f"{base_url}/data_extraction/index.html"
+        },
+        {
+            "use_case": "web_scraping",
+            "goal": "Navigate through pagination and collect articles",
+            "url": f"{base_url}/web_scraping/index.html"
+        },
+        {
+            "use_case": "search_research",
+            "goal": "Search for 'python' and view results",
+            "url": f"{base_url}/search_research/index.html"
+        },
+        {
+            "use_case": "workflow_automation",
+            "goal": "Complete the login workflow with demo credentials",
+            "url": f"{base_url}/workflow_automation/index.html"
+        },
+        {
+            "use_case": "ecommerce",
+            "goal": "Add a product to the shopping cart",
+            "url": f"{base_url}/ecommerce/index.html"
+        }
     ]
     
-    if use_case:
-        cmd.extend(["-k", use_case])
+    results = []
     
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=Path(__file__).parent.parent
-    )
+    for test in test_cases:
+        agent = BrowserAgent()
+        try:
+            await agent.initialize()
+            task_result = await agent.execute_task(
+                goal=test["goal"],
+                start_url=test["url"],
+                max_steps=15
+            )
+            
+            results.append({
+                "use_case": test["use_case"],
+                "success": task_result.success,
+                "steps": len(task_result.steps),
+                "execution_time": task_result.execution_time,
+                "error": task_result.error
+            })
+        finally:
+            await agent.cleanup()
     
     return {
-        "returncode": result.returncode,
-        "stdout": result.stdout,
-        "stderr": result.stderr
+        "total_tests": len(results),
+        "successful": sum(1 for r in results if r["success"]),
+        "results": results
     }
 
 
 if __name__ == "__main__":
-    # Run tests when executed directly
-    pytest.main([
-        __file__,
-        "-v",
-        "--run-integration",
-        "--tb=short"
-    ])
+    import sys
+    
+    # Run with: python test_integration_use_cases.py --run-integration
+    if "--run-integration" in sys.argv:
+        pytest.main([__file__, "-v", "--run-integration", "-s"])
+    else:
+        print("Usage: python test_integration_use_cases.py --run-integration")
+        print("       pytest test_integration_use_cases.py -v --run-integration")

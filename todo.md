@@ -1,7 +1,7 @@
 # Browser Agent Development Todo List
 
 > **Version Tracking:** Minor changes = x.x.1, Mid changes = x.1.x, Major changes = 1.x.x
-> **Last Updated:** 2026-03-20
+> **Last Updated:** 2026-03-26
 
 ---
 
@@ -398,15 +398,22 @@ Create localhost test pages for each use case to enable automated testing and va
 ## Phase 5: Production & Polish (Week 9-10)
 
 ### 5.1 FastAPI Endpoints
-- [~] Basic API structure (simple_browser_api.py)
-- [ ] Task submission endpoint
-- [ ] Task status endpoint
-- [ ] Task cancellation endpoint
-- [ ] Session management endpoints
-- [ ] Skill execution endpoints
-- [ ] Streaming responses
-- [ ] Request validation
-- [ ] Error handling middleware
+- [x] Basic API structure (simple_browser_api.py)
+- [x] Full REST API implementation (`browser_agent/api/`)
+  - [x] `browser_agent/api/__init__.py` - Module exports
+  - [x] `browser_agent/api/models.py` - Pydantic request/response models
+  - [x] `browser_agent/api/task_manager.py` - Task lifecycle management
+  - [x] `browser_agent/api/app.py` - FastAPI application
+- [x] Task submission endpoint (`POST /tasks`)
+- [x] Task status endpoint (`GET /tasks/{task_id}`)
+- [x] Task cancellation endpoint (`DELETE /tasks/{task_id}`)
+- [x] Task listing with filtering (`GET /tasks`)
+- [x] Session management endpoints (`GET /sessions`, `DELETE /sessions/{id}`)
+- [x] Skill execution endpoints (`GET /skills`, `POST /skills/{name}/execute`)
+- [x] Request validation (Pydantic models)
+- [x] Error handling middleware
+- [x] CORS middleware
+- [x] 47 API tests (all passing)
 
 ### 5.2 Web Dashboard
 - [ ] Visual task tracking
@@ -418,22 +425,37 @@ Create localhost test pages for each use case to enable automated testing and va
 
 ### 5.3 Observability
 - [x] Basic logging (Python logging module)
-- [ ] Structured logging with structlog
-- [ ] Correlation IDs for request tracing
-- [ ] Metrics collection:
-  - [ ] Task duration
-  - [ ] Success rate
-  - [ ] Error types
-  - [ ] Action latency
+- [x] Structured logging (`browser_agent/observability/logging_config.py`)
+  - [x] JSON-formatted log output
+  - [x] StructuredFormatter class
+  - [x] ContextualLogger with persistent context
+- [x] Correlation IDs for request tracing
+  - [x] CorrelationId ContextVar
+  - [x] CorrelationIdFilter for auto-injection
+- [x] Metrics collection (`browser_agent/observability/metrics.py`):
+  - [x] Counter metric for events
+  - [x] Gauge metric for current values
+  - [x] Histogram metric for timings
+  - [x] Task duration tracking
+  - [x] Success rate tracking
+  - [x] Error types tracking
+  - [x] Action latency tracking
+  - [x] Timer context manager
+- [x] Health check endpoints (`browser_agent/observability/health.py`)
+  - [x] HealthStatus enum (HEALTHY, DEGRADED, UNHEALTHY)
+  - [x] ComponentHealth dataclass
+  - [x] HealthChecker class with periodic checking
+  - [x] Component health factories
+- [x] Prometheus metrics export (`export_prometheus()`)
+- [x] `/health` endpoint with readiness/liveness probes
 - [ ] Weights & Biases integration
-- [ ] Health check endpoints
-- [ ] Prometheus metrics export
+- [x] 42 observability tests (all passing)
 
 ### 5.4 Configuration Management
-- [ ] YAML configuration file support
-- [ ] Environment variable overrides
-- [ ] Configuration validation
-- [ ] Default configurations
+- [x] YAML configuration file support (`config.yaml`)
+- [x] Environment variable overrides (in `browser_agent/config.py`)
+- [x] Configuration validation (Pydantic)
+- [x] Default configurations
 - [ ] Profile/environment-specific configs
 
 ### 5.5 Docker & Deployment
