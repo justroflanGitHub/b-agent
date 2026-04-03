@@ -56,17 +56,29 @@ class BrowserAgent:
             )
     """
     
-    def __init__(self, config: Optional[Config] = None):
+    def __init__(
+        self,
+        config: Optional[Config] = None,
+        credential_vault=None,
+        audit_log=None,
+        tenant_id: Optional[str] = None,
+    ):
         self.config = config or get_config()
-        
+
         # Components (initialized on start)
         self.browser: Optional[BrowserController] = None
         self.vision_client: Optional[VisionClient] = None
         self.action_executor: Optional[ActionExecutor] = None
-        
+
+        # Security
+        self.credential_vault = credential_vault  # Optional CredentialVault
+        self.audit_log = audit_log  # Optional AuditLog
+        self.tenant_id = tenant_id or "default"
+
         # State
         self._initialized = False
         self._current_task: Optional[str] = None
+        self._current_task_id: Optional[str] = None
         self._execution_history: List[Dict[str, Any]] = []
     
     async def __aenter__(self):
@@ -114,11 +126,11 @@ class BrowserAgent:
     async def cleanup(self):
         """Clean up all resources."""
         logger.info("Cleaning up Browser Agent...")
-        
+
         if self.browser:
             await self.browser.close()
             self.browser = None
-        
+
         if self.vision_client:
             await self.vision_client.close()
             self.vision_client = None
@@ -132,7 +144,8 @@ class BrowserAgent:
         self,
         goal: str,
         start_url: Optional[str] = None,
-        max_steps: int = 20
+        max_steps: int = 20,
+        credential_aliases: Optional[Dict[str, str]] = None,
     ) -> TaskResult:
         """
         Execute a task using vision-guided automation.
@@ -141,33 +154,82 @@ class BrowserAgent:
             goal: Natural language description of the task
             start_url: Optional starting URL
             max_steps: Maximum number of action steps
-            
+            credential_aliases: Dict mapping field names to vault aliases
+        
         Returns:
             TaskResult with success status and execution details
         """
         if not self._initialized:
             await self.initialize()
-        
+
+        # Resolve credential placeholders in goal and URL
+        resolved_goal = goal
+        resolved_url = start_url
+        if self.credential_vault and credential_aliases:
+            try:
+                resolved_goal = await self._resolve_credentials_in_text(goal, credential_aliases)
+                if start_url:
+                    resolved_url = await self._resolve_credentials_in_text(start_url, credential_aliases)
+                logger.info("Resolved %d credential alias(es)", len(credential_aliases))
+            except Exception as e:
+                logger.warning("Credential resolution failed: %s", e)
+
         start_time = time.time()
-        self._current_task = goal
+        self._current_task = resolved_goal
+
+        # Generate task ID
+        import uuid
+        self._current_task_id = str(uuid.uuid4())
+
+        # Audit: task created
+        if self.audit_log:
+            await self.audit_log.record(
+                event_type="task.created",
+                tenant_id=self.tenant_id,
+                task_id=self._current_task_id,
+                parameters={"goal": goal, "start_url": start_url},
+            )
+
         steps = []
-        
+
         try:
             # Navigate to start URL if provided
-            if start_url:
-                await self.browser.goto(start_url)
+            if resolved_url:
+                await self.browser.goto(resolved_url)
                 steps.append({
                     "action": "navigate",
-                    "url": start_url,
+                    "url": resolved_url,
                     "success": True
                 })
-            
+
+                if self.audit_log:
+                    await self.audit_log.record(
+                        event_type="action.executed",
+                        tenant_id=self.tenant_id,
+                        task_id=self._current_task_id,
+                        action_type="navigate",
+                        target_url=resolved_url,
+                        outcome="success",
+                    )
+
             # Execute vision-guided task
-            result = await self._execute_vision_task(goal, max_steps - len(steps))
+            result = await self._execute_vision_task(resolved_goal, max_steps - len(steps))
             steps.extend(result.get("steps", []))
-            
+
             execution_time = time.time() - start_time
-            
+
+            # Audit: task completed/failed
+            if self.audit_log:
+                success = result.get("success", False)
+                await self.audit_log.record(
+                    event_type="task.completed" if success else "task.failed",
+                    tenant_id=self.tenant_id,
+                    task_id=self._current_task_id,
+                    outcome="success" if success else "failure",
+                    error_message=result.get("error"),
+                    parameters={"execution_time": execution_time, "steps": len(steps)},
+                )
+
             return TaskResult(
                 success=result.get("success", False),
                 goal=goal,
@@ -176,11 +238,21 @@ class BrowserAgent:
                 data=result.get("data"),
                 error=result.get("error")
             )
-            
+
         except Exception as e:
             execution_time = time.time() - start_time
             logger.error(f"Task execution failed: {e}")
-            
+
+            # Audit: task failed
+            if self.audit_log:
+                await self.audit_log.record(
+                    event_type="task.failed",
+                    tenant_id=self.tenant_id,
+                    task_id=self._current_task_id,
+                    outcome="failure",
+                    error_message=str(e),
+                )
+
             return TaskResult(
                 success=False,
                 goal=goal,
@@ -954,7 +1026,74 @@ For "{goal}" on Google:
             "current_task": self._current_task,
             "action_stats": self.action_executor.get_stats() if self.action_executor else {},
             "vision_stats": self.vision_client.get_stats() if self.vision_client else {},
+            "credential_vault_enabled": self.credential_vault is not None,
+            "audit_log_enabled": self.audit_log is not None,
+            "tenant_id": self.tenant_id,
         }
+
+    # --- Credential Resolution ---
+
+    async def _resolve_credentials_in_text(
+        self,
+        text: str,
+        credential_aliases: Dict[str, str],
+    ) -> str:
+        """Replace ${vault:alias.field} placeholders with resolved credentials.
+
+        Also supports simple ${field_name} syntax where field_name maps to
+        credential_aliases dict.
+        """
+        import re
+
+        if not self.credential_vault:
+            return text
+
+        result = text
+
+        # Resolve ${vault:alias.field} patterns
+        vault_pattern = r'\$\{vault:([^.}]+)\.?([^}]*)\}'
+        for match in re.finditer(vault_pattern, result):
+            alias = match.group(1)
+            field = match.group(2) or "secret"
+            try:
+                cred = await self.credential_vault.get_credential(
+                    alias, self.tenant_id, requested_by="agent"
+                )
+                try:
+                    if field == "secret":
+                        value = cred.secret
+                    elif field == "username":
+                        value = cred.username or ""
+                    else:
+                        value = str(cred.metadata.get(field, ""))
+                    result = result.replace(match.group(0), value)
+                finally:
+                    cred.wipe()
+            except Exception as e:
+                logger.warning("Failed to resolve vault reference %s: %s", match.group(0), e)
+
+        # Resolve simple ${field_name} using credential_aliases mapping
+        simple_pattern = r'\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}'
+        for match in re.finditer(simple_pattern, result):
+            field_name = match.group(1)
+            if field_name in credential_aliases:
+                alias = credential_aliases[field_name]
+                try:
+                    cred = await self.credential_vault.get_credential(
+                        alias, self.tenant_id, requested_by="agent"
+                    )
+                    try:
+                        value = cred.secret
+                        result = result.replace(match.group(0), value)
+                    finally:
+                        cred.wipe()
+                except Exception as e:
+                    logger.warning(
+                        "Failed to resolve credential %s -> %s: %s",
+                        field_name, alias, e,
+                    )
+
+        return result
 
 
 # Convenience function

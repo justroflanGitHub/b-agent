@@ -564,7 +564,407 @@ def create_app(
         
         return {"message": f"Session {session_id} closed"}
     
+    # --- Credential Endpoints ---
+
+    @app.post("/credentials", tags=["Credentials"])
+    async def store_credential(request: dict):
+        """
+        Store a new credential in the vault.
+
+        Body:
+            alias: Credential alias (e.g., "salesforce_prod")
+            tenant_id: Tenant ID (default: "default")
+            credential_type: "password" | "api_key" | "oauth_token" | "cookie" | "certificate" | "ssh_key" | "custom"
+            secret: The secret value
+            username: Optional username
+            metadata: Optional metadata dict
+            expires_at: Optional ISO datetime
+            rotation_policy: "none" | "on_use" | "time_based" | "on_failure"
+            rotation_interval_days: Days between rotations (default: 90)
+        """
+        try:
+            from browser_agent.security import CredentialVault, CredentialType, RotationPolicy
+            vault = _get_credential_vault()
+            if vault is None:
+                raise HTTPException(status_code=503, detail="Credential vault not configured")
+
+            cred_type = CredentialType(request.get("credential_type", "password"))
+            rot_policy = RotationPolicy(request.get("rotation_policy", "none"))
+            expires = request.get("expires_at")
+            expires_dt = datetime.fromisoformat(expires) if expires else None
+
+            entry = await vault.store_credential(
+                alias=request["alias"],
+                tenant_id=request.get("tenant_id", "default"),
+                credential_type=cred_type,
+                secret=request["secret"],
+                username=request.get("username"),
+                metadata=request.get("metadata", {}),
+                expires_at=expires_dt,
+                rotation_policy=rot_policy,
+                rotation_interval_days=request.get("rotation_interval_days", 90),
+                created_by=request.get("created_by", "api"),
+            )
+            return {
+                "credential_id": entry.credential_id,
+                "alias": entry.alias,
+                "credential_type": entry.credential_type.value,
+                "created_at": entry.created_at.isoformat(),
+            }
+        except KeyError as e:
+            raise HTTPException(status_code=400, detail=f"Missing required field: {e}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/credentials", tags=["Credentials"])
+    async def list_credentials(tenant_id: str = Query("default")):
+        """List credential summaries (never returns secrets)."""
+        try:
+            vault = _get_credential_vault()
+            if vault is None:
+                raise HTTPException(status_code=503, detail="Credential vault not configured")
+            summaries = await vault.list_credentials(tenant_id)
+            return [
+                {
+                    "credential_id": s.credential_id,
+                    "alias": s.alias,
+                    "tenant_id": s.tenant_id,
+                    "credential_type": s.credential_type.value,
+                    "username": s.username,
+                    "created_at": s.created_at.isoformat(),
+                    "updated_at": s.updated_at.isoformat(),
+                    "expires_at": s.expires_at.isoformat() if s.expires_at else None,
+                    "last_used_at": s.last_used_at.isoformat() if s.last_used_at else None,
+                    "access_count": s.access_count,
+                    "rotation_policy": s.rotation_policy.value,
+                    "is_expired": s.is_expired,
+                }
+                for s in summaries
+            ]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/credentials/{alias}", tags=["Credentials"])
+    async def get_credential_metadata(alias: str, tenant_id: str = Query("default")):
+        """Get credential metadata (never returns the secret)."""
+        try:
+            vault = _get_credential_vault()
+            if vault is None:
+                raise HTTPException(status_code=503, detail="Credential vault not configured")
+            summary = await vault.get_credential_summary(alias, tenant_id)
+            if summary is None:
+                raise HTTPException(status_code=404, detail=f"Credential '{alias}' not found")
+            return {
+                "credential_id": summary.credential_id,
+                "alias": summary.alias,
+                "tenant_id": summary.tenant_id,
+                "credential_type": summary.credential_type.value,
+                "username": summary.username,
+                "metadata": summary.metadata,
+                "created_at": summary.created_at.isoformat(),
+                "updated_at": summary.updated_at.isoformat(),
+                "expires_at": summary.expires_at.isoformat() if summary.expires_at else None,
+                "last_used_at": summary.last_used_at.isoformat() if summary.last_used_at else None,
+                "access_count": summary.access_count,
+                "rotation_policy": summary.rotation_policy.value,
+                "is_expired": summary.is_expired,
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.put("/credentials/{alias}", tags=["Credentials"])
+    async def update_credential(alias: str, request: dict):
+        """Update credential metadata or rotate secret."""
+        try:
+            vault = _get_credential_vault()
+            if vault is None:
+                raise HTTPException(status_code=503, detail="Credential vault not configured")
+            tenant_id = request.get("tenant_id", "default")
+
+            if "new_secret" in request:
+                entry = await vault.rotate_credential(
+                    alias=alias,
+                    tenant_id=tenant_id,
+                    new_secret=request["new_secret"],
+                    rotated_by=request.get("rotated_by", "api"),
+                )
+            else:
+                entry = await vault.update_metadata(
+                    alias=alias,
+                    tenant_id=tenant_id,
+                    metadata=request.get("metadata"),
+                    username=request.get("username"),
+                    expires_at=request.get("expires_at"),
+                )
+
+            if entry is None:
+                raise HTTPException(status_code=404, detail=f"Credential '{alias}' not found")
+
+            return {"alias": alias, "updated_at": entry.updated_at.isoformat()}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/credentials/{alias}", tags=["Credentials"])
+    async def delete_credential(alias: str, tenant_id: str = Query("default")):
+        """Delete a credential from the vault."""
+        try:
+            vault = _get_credential_vault()
+            if vault is None:
+                raise HTTPException(status_code=503, detail="Credential vault not configured")
+            deleted = await vault.delete_credential(alias, tenant_id)
+            if not deleted:
+                raise HTTPException(status_code=404, detail=f"Credential '{alias}' not found")
+            return {"alias": alias, "deleted": True}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/credentials/{alias}/rotate", tags=["Credentials"])
+    async def rotate_credential(alias: str, request: dict):
+        """Rotate a credential's secret."""
+        try:
+            vault = _get_credential_vault()
+            if vault is None:
+                raise HTTPException(status_code=503, detail="Credential vault not configured")
+            entry = await vault.rotate_credential(
+                alias=alias,
+                tenant_id=request.get("tenant_id", "default"),
+                new_secret=request["new_secret"],
+                rotated_by=request.get("rotated_by", "api"),
+            )
+            return {"alias": alias, "rotated_at": entry.updated_at.isoformat()}
+        except KeyError as e:
+            raise HTTPException(status_code=400, detail=f"Missing required field: {e}")
+        except KeyError:
+            raise HTTPException(status_code=404, detail=f"Credential '{alias}' not found")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # --- Audit Endpoints ---
+
+    @app.get("/audit/events", tags=["Audit"])
+    async def query_audit_events(
+        tenant_id: str = Query("default"),
+        task_id: Optional[str] = Query(None),
+        event_type: Optional[str] = Query(None),
+        start_time: Optional[str] = Query(None),
+        end_time: Optional[str] = Query(None),
+        limit: int = Query(100, le=1000),
+        offset: int = Query(0, ge=0),
+    ):
+        """Query audit events with filters."""
+        try:
+            audit = _get_audit_log()
+            if audit is None:
+                raise HTTPException(status_code=503, detail="Audit log not configured")
+
+            from browser_agent.compliance import AuditEventType
+            from browser_agent.compliance.audit_log import AuditFilter, SensitivityLevel
+            from datetime import datetime as dt
+
+            event_types = None
+            if event_type:
+                event_types = [AuditEventType(event_type)]
+
+            filters = AuditFilter(
+                tenant_id=tenant_id,
+                task_id=task_id,
+                event_types=event_types,
+                start_time=dt.fromisoformat(start_time) if start_time else None,
+                end_time=dt.fromisoformat(end_time) if end_time else None,
+                limit=limit,
+                offset=offset,
+            )
+
+            events = await audit.query(filters)
+            return [e.to_dict() for e in events]
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/audit/tasks/{task_id}/timeline", tags=["Audit"])
+    async def get_task_timeline(task_id: str, tenant_id: str = Query("default")):
+        """Get full timeline of events for a task."""
+        try:
+            audit = _get_audit_log()
+            if audit is None:
+                raise HTTPException(status_code=503, detail="Audit log not configured")
+            timeline = await audit.get_task_timeline(task_id, tenant_id)
+            return {
+                "task_id": timeline.task_id,
+                "total_duration": timeline.total_duration,
+                "action_count": timeline.action_count,
+                "success_count": timeline.success_count,
+                "failure_count": timeline.failure_count,
+                "events": [e.to_dict() for e in timeline.events],
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/audit/verify-chain", tags=["Audit"])
+    async def verify_chain(tenant_id: str = Query("default")):
+        """Verify integrity of the audit chain."""
+        try:
+            audit = _get_audit_log()
+            if audit is None:
+                raise HTTPException(status_code=503, detail="Audit log not configured")
+            result = await audit.verify_chain(tenant_id)
+            return {
+                "total_events": result.total_events,
+                "verified_events": result.verified_events,
+                "is_valid": result.is_valid,
+                "tampered_events": len(result.tampered_events),
+                "missing_events": len(result.missing_events),
+                "verification_time": result.verification_time,
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/audit/export", tags=["Audit"])
+    async def export_audit(
+        format: str = Query("json"),
+        tenant_id: str = Query("default"),
+        start_time: Optional[str] = Query(None),
+        end_time: Optional[str] = Query(None),
+    ):
+        """Export audit events in various formats."""
+        try:
+            audit = _get_audit_log()
+            if audit is None:
+                raise HTTPException(status_code=503, detail="Audit log not configured")
+
+            from browser_agent.compliance.audit_log import AuditFilter
+            from browser_agent.compliance.export import AuditExporter
+            from datetime import datetime as dt
+
+            filters = AuditFilter(
+                tenant_id=tenant_id,
+                start_time=dt.fromisoformat(start_time) if start_time else None,
+                end_time=dt.fromisoformat(end_time) if end_time else None,
+                limit=100000,
+            )
+            events = await audit.query(filters)
+
+            if format == "csv":
+                return JSONResponse(content={"data": AuditExporter.to_csv(events)})
+            elif format == "cef":
+                return JSONResponse(content={"data": AuditExporter.to_cef(events)})
+            elif format == "syslog":
+                return JSONResponse(content={"data": AuditExporter.to_syslog(events)})
+            else:
+                return JSONResponse(content={"data": AuditExporter.to_json(events)})
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/audit/compliance-report", tags=["Audit"])
+    async def compliance_report(
+        framework: str = Query("soc2"),
+        tenant_id: str = Query("default"),
+        start_date: str = Query(...),
+        end_date: str = Query(...),
+    ):
+        """Generate a compliance report."""
+        try:
+            audit = _get_audit_log()
+            if audit is None:
+                raise HTTPException(status_code=503, detail="Audit log not configured")
+            from datetime import datetime as dt
+
+            report = await audit.generate_compliance_report(
+                framework=framework,
+                start_date=dt.fromisoformat(start_date),
+                end_date=dt.fromisoformat(end_date),
+                tenant_id=tenant_id,
+            )
+            return report.to_dict()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/audit/statistics", tags=["Audit"])
+    async def audit_statistics(tenant_id: str = Query("default")):
+        """Get audit statistics."""
+        try:
+            audit = _get_audit_log()
+            if audit is None:
+                raise HTTPException(status_code=503, detail="Audit log not configured")
+            from browser_agent.compliance.audit_log import AuditFilter
+
+            total = await audit._store.count(AuditFilter(tenant_id=tenant_id, limit=1))
+            return {"tenant_id": tenant_id, "total_events": total}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
     return app
+
+
+# Vault singleton (initialized on first use)
+_credential_vault = None
+
+
+def _get_credential_vault():
+    """Get or create the credential vault singleton."""
+    global _credential_vault
+    if _credential_vault is not None:
+        return _credential_vault
+
+    try:
+        from browser_agent.security import CredentialVault
+        import base64
+        import os
+
+        master_key_b64 = os.environ.get("CREDS_MASTER_KEY")
+        if not master_key_b64:
+            return None
+
+        master_key = base64.b64decode(master_key_b64)
+        store_type = os.environ.get("CREDS_STORE_TYPE", "file")
+        store_path = os.environ.get("CREDS_STORE_PATH", ".credentials")
+
+        _credential_vault = CredentialVault.from_config({
+            "master_key": master_key,
+            "store_type": store_type,
+            "store_path": store_path,
+        })
+        return _credential_vault
+    except Exception as e:
+        logger.warning("Failed to initialize credential vault: %s", e)
+        return None
+
+
+# Audit log singleton
+_audit_log = None
+
+
+def _get_audit_log():
+    """Get or create the audit log singleton."""
+    global _audit_log
+    if _audit_log is not None:
+        return _audit_log
+
+    try:
+        from browser_agent.compliance import AuditLog
+        import os
+
+        enabled = os.environ.get("AUDIT_ENABLED", "false").lower()
+        if enabled != "true":
+            return None
+
+        store_path = os.environ.get("AUDIT_STORE_PATH", ".audit")
+        _audit_log = AuditLog.from_config({
+            "store_type": os.environ.get("AUDIT_STORE_TYPE", "sqlite"),
+            "store_path": store_path,
+            "chain_key_env": "AUDIT_CHAIN_KEY",
+        })
+        return _audit_log
+    except Exception as e:
+        logger.warning("Failed to initialize audit log: %s", e)
+        return None
 
 
 # Default app instance

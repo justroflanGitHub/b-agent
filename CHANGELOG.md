@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Phase 5: Production & Polish (in progress)
+- **Phase 6: Credential Vault & Secret Injection** — AES-256-GCM encryption, per-tenant key derivation (HKDF-SHA256), credential vault with file/SQLite stores, chained secret providers (env, HashiCorp Vault, AWS Secrets Manager, Azure Key Vault), credential injection into agent tasks (79 tests)
+- **Phase 7: Audit Trail & Compliance Engine** — Tamper-evident SHA-256 hash chain with HMAC signatures, structured audit logging, data classifier (PII/PHI/PCI), export to CEF/syslog/CSV/JSON, compliance report generation (26 tests)
+- **Phase 8: Approval Workflows & Governance** — Priority-based policy engine (first-match-wins), approval manager with escalation, Slack/Teams/Email/Webhook notifiers, built-in governance gates (URL whitelist, credential access, PII handling, cost limit, time window), policy templates (41 tests)
+- **Phase 9: Scheduled & Recurring Workflows** — Cron expression parser, recurring task scheduler, business calendar with holiday support, task health monitoring, checkpoint-based resume (32 tests)
+- **Phase 10: Data Loss Prevention (DLP)** — Regex-based PII detector with 12+ patterns (SSN, credit card with Luhn validation, email, phone, etc.), 5 redaction strategies (mask, hash, redact, tokenize, partial), DLP policy engine with configurable actions, reversible tokenization (41 tests)
+- **Phase 11: Multi-Tenant Task Orchestrator** — Tenant management with 4 plan tiers (Free/Starter/Professional/Enterprise), resource pool with concurrent session limits, fair-share scheduler, quota management with plan defaults, metering engine with invoice generation (33 tests)
+- **Phase 12: Workflow Recording & Replay** — Action recording with visual/element/page context, SQLite-backed recording store with versioning, 3 replay modes (Strict/Adaptive/Vision-Only), adaptive replay with self-healing strategies (selector→text→description→position), recording parameterizer, version control with diff and rollback (31 tests)
+
+### Enterprise Feature Summary
+- **7 new modules** under `browser_agent/` (security, compliance, governance, scheduling, orchestration, recording)
+- **283 total tests**, 0 failures across all enterprise phases
+- All modules integrated into `agent.py` and `api/app.py`
 
 ---
 

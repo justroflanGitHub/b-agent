@@ -1872,6 +1872,57 @@ Comprehensive UI component testing page.
 
 ---
 
+## Enterprise Features (v1.0.0)
+
+### Credential Vault & Secret Injection
+- AES-256-GCM encryption with per-tenant HKDF-SHA256 key derivation
+- Credential vault with file and SQLite storage backends
+- Chained secret providers: environment variables, HashiCorp Vault, AWS Secrets Manager, Azure Key Vault
+- Automatic credential injection into agent tasks with `{{secret.name}}` placeholder resolution
+
+### Audit Trail & Compliance
+- Tamper-evident SHA-256 hash chain with HMAC-SHA256 signatures
+- Structured audit logging with 30+ event types and sensitivity levels (PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED)
+- Data classifier for PII, PHI, PCI, and custom categories
+- Export to CEF, syslog, CSV, JSON formats
+- Automated compliance report generation (GDPR, HIPAA, PCI-DSS, SOC 2, ISO 27001)
+
+### Approval Workflows & Governance
+- Priority-based policy engine with first-match-wins evaluation
+- Approval manager with configurable escalation chains
+- Notifications via Slack, Microsoft Teams, Email, and webhooks
+- Built-in governance gates: URL whitelist, credential access, PII handling, cost limits, time windows
+- Pre-built policy templates for common enterprise scenarios
+
+### Scheduled & Recurring Workflows
+- Full cron expression parser with business hours support
+- Recurring task scheduler with checkpoint-based resume
+- Business calendar with configurable holidays and working hours
+- Task health monitoring with automatic failure detection
+
+### Data Loss Prevention (DLP)
+- Regex-based PII detector with 12+ built-in patterns (SSN, credit card with Luhn validation, email, phone, etc.)
+- 5 redaction strategies: mask, hash, redact, tokenize (reversible), partial
+- Configurable DLP policies with allow/warn/block actions
+- Integration points for LLM prompts, data extraction, and screenshots
+
+### Multi-Tenant Task Orchestrator
+- Tenant management with 4 plan tiers (Free, Starter, Professional, Enterprise)
+- Resource pool with concurrent browser session limits per tenant
+- Fair-share scheduler ensuring equitable resource distribution
+- Quota management with plan-default limits and overage tracking
+- Metering engine with usage recording and invoice generation
+
+### Workflow Recording & Replay
+- Step-by-step action recording with visual, element, and page context
+- SQLite-backed recording store with versioning
+- 3 replay modes: Strict (exact match), Adaptive (self-healing), Vision-Only
+- Adaptive replay with cascading fallback strategies (selector → text → description → position)
+- Recording parameterizer for creating reusable workflow templates
+- Version control with diff, rollback, and change tracking
+
+---
+
 ## Version History
 
 | Version | Description |
@@ -1884,6 +1935,7 @@ Comprehensive UI component testing page.
 | v0.10.0 | Memory System - Visual memory, error prevention, conversation |
 | v0.11.0 | iframe Support - Frame management |
 | v0.12.0 | Testing - Integration tests, test pages |
+| v1.0.0 | Enterprise Features - Credential Vault, Audit Trail, Governance, Scheduling, DLP, Multi-Tenant, Recording & Replay |
 
 ---
 
