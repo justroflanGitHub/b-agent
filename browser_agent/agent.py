@@ -969,46 +969,82 @@ Return JSON:
                 progress_ctx += f"  - {fl}: {fv}\n"
             progress_ctx += "\nOnly fill fields NOT listed above.\n"
         
-        prompt = f"""
-You are a precise UI automation assistant.
-        
-Task: {goal}
+        # Build tool definitions
+        tools = [
+            {
+                "name": "fill_field",
+                "description": "Click a form field and type a value into it in one step. Use for any form input.",
+                "parameters": {
+                    "field_label": "The visible label text of the field (e.g. 'First Name', 'Email')",
+                    "field_value": "ONLY the short value to type (e.g. 'John', 'test@email.com'). NEVER the full task text.",
+                    "x": "x coordinate of the field",
+                    "y": "y coordinate of the field"
+                }
+            },
+            {
+                "name": "click",
+                "description": "Click at specific coordinates on the page",
+                "parameters": {
+                    "x": "x coordinate to click",
+                    "y": "y coordinate to click",
+                    "description": "what is being clicked"
+                }
+            },
+            {
+                "name": "type",
+                "description": "Type text into the currently focused field",
+                "parameters": {
+                    "text": "the text to type"
+                }
+            },
+            {
+                "name": "press_enter",
+                "description": "Press the Enter key",
+                "parameters": {}
+            },
+            {
+                "name": "scroll_down",
+                "description": "Scroll the page down to see more content",
+                "parameters": {}
+            },
+            {
+                "name": "complete",
+                "description": "The task is fully finished, no more actions needed",
+                "parameters": {
+                    "result": "summary of what was accomplished"
+                }
+            }
+        ]
 
-Current step: {step_num + 1}
-{action_history}{progress_ctx}
-Analyze the screenshot and determine the NEXT SINGLE action.
-
-Available actions:
-- fill_field: Click a form field and type a value into it in one step. Requires field_label, field_value (short value ONLY), x, y.
-- click: Click at coordinates (provide x, y)
-- type: Type text into the currently focused field
-- press_enter: Press Enter key
-- scroll_down: Scroll down the page
-- complete: Task is finished
-
-Return JSON:
-{{
-    "type": "fill_field|click|type|press_enter|scroll_down|complete",
-    "x": coordinate_x,
-    "y": coordinate_y,
-    "text": "text to type",
-    "field_label": "field label text",
-    "field_value": "short value to type",
-    "description": "what this does",
-    "complete": false,
-    "result": "summary if complete"
-}}
+        prompt = f"""[BEGIN OF TASK INSTRUCTION]
+You are a precise UI automation assistant. Analyze the screenshot and determine the NEXT SINGLE action to complete the task.
 
 Rules:
-1. For form fields, prefer fill_field over click+type. field_value must be ONLY the short value (e.g. "John"), never instructions.
+1. For form fields, use fill_field. field_value must be ONLY the short value to type (e.g. "John"), NEVER the full task text.
 2. Gray placeholder text (like "Enter email...") means the field is EMPTY - it still needs to be filled.
 3. After a successful fill_field, proceed to the NEXT unfilled field.
-4. Do NOT interact with fields already listed as completed above.
+4. Do NOT interact with fields already listed as completed below.
 5. Do NOT repeat actions that already succeeded.
-6. When all tasks are done, return type "complete".
+6. When all tasks are done, use "complete".
+[END OF TASK INSTRUCTION]
 
-Screenshot: {self.config.browser.viewport_width}x{self.config.browser.viewport_height}
-"""
+[BEGIN OF AVAILABLE TOOLS]
+{json.dumps(tools)}
+[END OF AVAILABLE TOOLS]
+
+[BEGIN OF FORMAT INSTRUCTION]
+The output MUST be a single JSON object with a "tool_calls" array. Each entry has "name" and "arguments".
+Example:
+{{"tool_calls": [{{"name": "fill_field", "arguments": {{"field_label": "Email", "field_value": "test@test.com", "x": 400, "y": 300}}}}]}}
+Only ONE tool call per step. No other text outside the JSON.
+[END OF FORMAT INSTRUCTION]
+
+[BEGIN OF TASK]
+Task: {goal}
+Current step: {step_num + 1}
+Screenshot dimensions: {self.config.browser.viewport_width}x{self.config.browser.viewport_height}
+[END OF TASK]
+{action_history}{progress_ctx}"""
         
         try:
             response = await self.vision_client.chat_with_image(prompt, screenshot)
@@ -1022,11 +1058,27 @@ Screenshot: {self.config.browser.viewport_width}x{self.config.browser.viewport_h
             if json_start >= 0 and json_end > json_start:
                 json_str = content[json_start:json_end]
                 try:
-                    action = json.loads(json_str)
+                    parsed = json.loads(json_str)
                 except json.JSONDecodeError:
                     decoder = json.JSONDecoder()
-                    action, _ = decoder.raw_decode(content, json_start)
-                logger.info(f"Vision action: {action.get('type')} - {action.get('description', '')}")
+                    parsed, _ = decoder.raw_decode(content, json_start)
+                
+                # Handle new tool_calls format: {"tool_calls": [{"name": ..., "arguments": ...}]}
+                if "tool_calls" in parsed and isinstance(parsed["tool_calls"], list) and len(parsed["tool_calls"]) > 0:
+                    tool_call = parsed["tool_calls"][0]
+                    action = {
+                        "type": tool_call.get("name", ""),
+                        "description": tool_call.get("arguments", {}).get("description", ""),
+                        **tool_call.get("arguments", {})
+                    }
+                # Handle old format: {"type": "click", "x": 100, ...}
+                elif "type" in parsed:
+                    action = parsed
+                else:
+                    logger.warning(f"Unknown response format: {parsed}")
+                    return None
+                
+                logger.info(f"Vision action: {action.get('type')} - {action.get('description', action.get('field_label', ''))}")
                 return action
             
         except Exception as e:

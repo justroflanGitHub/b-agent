@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scroll loop breaker**: Uses goal-text matching to find relevant buttons instead of hardcoded keywords
 - **Scroll into view**: Elements found off-screen are scrolled into view before clicking
 - **DOM button fallback**: Uses best-score matching, excludes plain links to avoid cart icon false matches
+- **Prompt restructured**: xLAM-style [BEGIN/END] sections with explicit tool definitions and parameter schemas
+- **JSON parser**: Backward compatible - handles both new tool_calls format and old flat format
 - **Search click validation**: Accepts when search button is focused instead of input field
 - **Button click validation**: Also checks goal text for button-like intent, not just action description
 - **Form filling test now passing**: All fields filled correctly without instruction pasting
