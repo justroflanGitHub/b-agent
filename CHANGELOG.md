@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI Button Click test now passing**: Already passing with button click validation fixes
 - **UI Form Validation test now passing**: Field tracking allows re-filling, DOM field search uses bidirectional keyword matching
 - **DOM field search**: Bidirectional keyword matching so 'Email Address' matches 'Email (required)' label
+- **UI Modal Interaction test now passing**: Already passing with button click validation fixes
 - **DOM button fallback**: Uses best-score matching, excludes plain links to avoid cart icon false matches
 - **Search click validation**: Accepts when search button is focused instead of input field
 - **Button click validation**: Also checks goal text for button-like intent, not just action description
