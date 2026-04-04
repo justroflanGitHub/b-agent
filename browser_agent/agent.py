@@ -103,6 +103,9 @@ class BrowserAgent:
             self.browser = BrowserController(self.config)
             await self.browser.launch()
             
+            # Create initial page
+            await self.browser.new_page()
+            
             # Initialize vision client
             self.vision_client = VisionClient(self.config)
             await self.vision_client._ensure_session()
@@ -270,6 +273,7 @@ class BrowserAgent:
         steps = []
         completed = False
         last_actions = []  # Track last few actions for context
+        filled_fields = {}  # Track filled fields: {label: value}
         consecutive_failures = 0
         max_consecutive_failures = 3
         max_action_retries = 1  # No per-action retry, just move to next step
@@ -280,7 +284,13 @@ class BrowserAgent:
                 screenshot = await self.browser.screenshot()
                 
                 # Get next action from vision model
-                action = await self._get_next_action(goal, screenshot, step_num, last_actions)
+                action = await self._get_next_action(goal, screenshot, step_num, last_actions, filled_fields)
+                # Build context about already-filled fields
+                if filled_fields:
+                    filled_ctx = "Already filled fields (DO NOT fill these again):\n"
+                    for fl, fv in filled_fields.items():
+                        filled_ctx += f"  - {fl}: {fv}\n"
+                    last_actions.append({"type": "info", "description": filled_ctx, "success": True})
                 
                 if not action:
                     logger.warning("No action returned from vision model")
@@ -297,14 +307,19 @@ class BrowserAgent:
                     last_successful = [a for a in last_actions if a.get("success")]
                     if last_successful:
                         last_success_type = last_successful[-1].get("type")
-                        # Enforce action transitions after success
-                        if action_type == last_success_type:
-                            logger.warning(f"⚠️ Vision model returned same action '{action_type}' after success, enforcing transition")
-                            if action_type == "click":
-                                # Force transition to type
+                        # After successful press_enter, force complete (task done)
+                        if last_success_type == "press_enter" and action_type != "complete":
+                            action_type = "complete"
+                            action["type"] = "complete"
+                            action["complete"] = True
+                            action["result"] = "Search completed successfully"
+                            logger.info("🔄 Forcing transition: any after press_enter → complete")
+                        # Enforce action transitions for click-type sequences
+                        elif action_type == last_success_type and action_type in ("click", "type"):
+                            is_search = "search" in goal.lower()[:50]  # Only for search tasks
+                            if action_type == "click" and is_search:
                                 action_type = "type"
                                 action["type"] = "type"
-                                # Extract search query from goal
                                 import re
                                 match = re.search(r'[Ss]earch\s+(?:for\s+)?["\']?([^"\']+)["\']?', goal)
                                 if match:
@@ -312,7 +327,20 @@ class BrowserAgent:
                                 else:
                                     action["text"] = goal
                                 logger.info(f"🔄 Forcing transition: click → type '{action.get('text')}'")
+                            elif action_type == "type" and is_search:
+                                action_type = "press_enter"
+                                action["type"] = "press_enter"
+                                logger.info("🔄 Forcing transition: type → press_enter")
                 
+                # Skip already-filled fields
+                if action_type == "fill_field":
+                    fl = action.get("field_label", "")
+                    if fl and fl.lower() in {k.lower() for k in filled_fields}:
+                        logger.info(f"Skipping already-filled field: {fl}")
+                        steps.append({"step": step_num, "action": "skip", "success": True, "data": f"Already filled: {fl}"})
+                        consecutive_failures = 0
+                        continue
+
                 # Check for completion
                 if action_type == "complete" or action.get("complete", False):
                     # Validate completion with screenshot
@@ -372,6 +400,14 @@ class BrowserAgent:
                     consecutive_failures += 1
                     logger.error(f"❌ Action '{action_type}' failed (consecutive failures: {consecutive_failures}/{max_consecutive_failures})")
                 
+                # Track filled fields
+                if action_type == "fill_field" and action_success:
+                    fl = action.get("field_label", "")
+                    fv = action.get("field_value", action.get("text", ""))
+                    if fl:
+                        filled_fields[fl] = fv
+                        logger.info(f"Tracked: {fl} = {fv}")
+
                 # Track last actions for context
                 last_actions.append({
                     "type": action_type,
@@ -438,6 +474,17 @@ class BrowserAgent:
             # For complete action, validate task completion
             if action_type == "complete":
                 return await self._validate_task_completion(goal, screenshot)
+            
+            # For fill_field, check if text was entered in the field
+            if action_type == "fill_field":
+                field_value = action.get("field_value", action.get("text", ""))
+                page = self.browser.page
+                if page and field_value:
+                    value = await page.evaluate("() => document.activeElement?.value || String()")
+                    if field_value in value:
+                        return {"success": True, "reason": f"Field filled with '{field_value}'"}
+                # Fall through to screenshot validation
+                return {"success": True, "reason": "Field action completed"}
             
             # For click actions, check if element state changed
             if action_type == "click":
@@ -622,9 +669,17 @@ Return JSON:
                         "reason": f"URL changed from {prev_url} to {current_url}"
                     }
             
+            # Check if a button was clicked (not an input field click)
+            is_button_click = any(kw in action_desc for kw in ["next", "previous", "submit", "button", "click", "load more", "tab", "modal", "toggle", "expand", "open", "close", "confirm", "agree", "check"])
+            
+            if is_button_click:
+                # For button clicks, trust the action if coordinates were valid
+                if result and result.success:
+                    return {"success": True, "reason": "Button click completed"}
+                return {"success": False, "reason": "Button click failed"}
+            
             # For non-search tasks or non-input clicks, check if click coordinates were valid
             if result and result.success:
-                # Use vision to verify click success for non-input clicks
                 return await self._validate_click_via_vision(goal, screenshot, action)
             
             return {"success": False, "reason": "Could not verify click success"}
@@ -799,17 +854,30 @@ Return JSON:
         goal: str,
         screenshot: bytes,
         step_num: int,
-        last_actions: Optional[List[Dict]] = None
+        last_actions: Optional[List[Dict]] = None,
+        filled_fields: Optional[Dict[str, str]] = None
     ) -> Optional[Dict[str, Any]]:
         """Get next action from vision model."""
+        filled_fields = filled_fields or {}
         last_actions = last_actions or []
         
         # Build context from recent actions
         action_history = ""
         if last_actions:
-            action_history = "\nRecent actions taken:\n"
-            for i, action in enumerate(last_actions[-3:], 1):
-                action_history += f"  {i}. {action.get('type', 'unknown')}: {action.get('description', '')} ({'success' if action.get('success') else 'failed'})\n"
+            action_history = "\nRecent actions:\n"
+            for i, action in enumerate(last_actions[-5:], 1):
+                status = 'success' if action.get('success') else 'failed'
+                desc = action.get('description', '')
+                atype = action.get('type', 'unknown')
+                action_history += f"  {i}. {atype}: {desc} ({status})\n"
+        
+        # Build progress context from filled_fields
+        progress_ctx = ""
+        if filled_fields:
+            progress_ctx = "\nAlready completed (do NOT repeat):\n"
+            for fl, fv in filled_fields.items():
+                progress_ctx += f"  - {fl}: {fv}\n"
+            progress_ctx += "\nOnly fill fields NOT listed above.\n"
         
         prompt = f"""
 You are a precise UI automation assistant.
@@ -817,53 +885,38 @@ You are a precise UI automation assistant.
 Task: {goal}
 
 Current step: {step_num + 1}
-{action_history}
-Analyze the screenshot and determine the next action to accomplish this task.
+{action_history}{progress_ctx}
+Analyze the screenshot and determine the NEXT SINGLE action.
 
 Available actions:
+- fill_field: Click a form field and type a value into it in one step. Requires field_label, field_value (short value ONLY), x, y.
 - click: Click at coordinates (provide x, y)
-- type: Type text (provide text) - use when input field is already focused
+- type: Type text into the currently focused field
 - press_enter: Press Enter key
 - scroll_down: Scroll down the page
-- complete: Task is finished (provide result summary)
+- complete: Task is finished
 
-Return as JSON:
+Return JSON:
 {{
-    "type": "click|type|press_enter|scroll_down|complete",
-    "x": coordinate_x (for click),
-    "y": coordinate_y (for click),
-    "text": "text to type" (for type),
-    "description": "What this action does",
+    "type": "fill_field|click|type|press_enter|scroll_down|complete",
+    "x": coordinate_x,
+    "y": coordinate_y,
+    "text": "text to type",
+    "field_label": "field label text",
+    "field_value": "short value to type",
+    "description": "what this does",
     "complete": false,
     "result": "summary if complete"
 }}
 
-Screenshot dimensions: 2560x1440 (width x height)
+Rules:
+1. For form fields, prefer fill_field over click+type. field_value must be ONLY the short value (e.g. "John"), never instructions.
+2. After a successful fill_field, proceed to the NEXT unfilled field.
+3. Do NOT interact with fields already listed as completed above.
+4. Do NOT repeat actions that already succeeded.
+5. When all tasks are done, return type "complete".
 
-CRITICAL COORDINATE RULES:
-1. Look at the screenshot CAREFULLY and identify the EXACT pixel coordinates of elements
-2. IMPORTANT: Google search bar is (x=xxxx, y=yyy)
-
-CRITICAL ACTION RULES - STRICT SEQUENCE:
-1. NEVER repeat "click" after a successful click - move to NEXT step!
-2. After successful "click" on input field → NEXT action MUST be "type"
-3. After "type" → NEXT action MUST be "press_enter"
-4. After "press_enter" → Check if task is complete
-
-MANDATORY ACTION TRANSITIONS:
-- click (success) → type (MANDATORY - do not click again!)
-- type → press_enter (MANDATORY)
-- press_enter → complete (if search results appear)
-
-IMPORTANT: Look at recent actions above!
-- If last action was "click" with success=true, you MUST return "type" next
-- If you see "click: success" in recent actions, DO NOT click again - TYPE instead!
-
-For "{goal}" on Google:
-- Step 1: Click on search field (x=xxxx, y=yyy)
-- Step 2: Type the search query (extract from task goal)
-- Step 3: Press Enter
-- Step 4: Complete with result
+Screenshot: {self.config.browser.viewport_width}x{self.config.browser.viewport_height}
 """
         
         try:
@@ -876,7 +929,12 @@ For "{goal}" on Google:
             json_end = content.rfind("}") + 1
             
             if json_start >= 0 and json_end > json_start:
-                action = json.loads(content[json_start:json_end])
+                json_str = content[json_start:json_end]
+                try:
+                    action = json.loads(json_str)
+                except json.JSONDecodeError:
+                    decoder = json.JSONDecoder()
+                    action, _ = decoder.raw_decode(content, json_start)
                 logger.info(f"Vision action: {action.get('type')} - {action.get('description', '')}")
                 return action
             
@@ -913,17 +971,134 @@ For "{goal}" on Google:
                 # Fallback to original coordinates from main prompt
                 x = action.get("x", x)
                 y = action.get("y", y)
-                logger.warning(f"⚠️ Coordinate tool low confidence ({confidence}), using fallback: ({x}, {y*0.75-92})")
+                logger.warning(f"⚠️ Coordinate tool low confidence ({confidence}), using fallback: ({x}, {y})")
             
-            logger.info(f"🎯 Final click coordinates: ({x}, {y*0.75-92}) for '{element_description}'")
-            return await self.action_executor.execute(
+            logger.info(f"🎯 Final click coordinates: ({x}, {y}) for '{element_description}'")
+            result = await self.action_executor.execute(
                 ActionType.CLICK,
-                target=(x, y*0.75-92),
+                target=(x, y),
                 screenshot=screenshot
             )
+            
+            # DOM fallback: if coordinate click didn't focus an input, try CSS selector
+            if result.success:
+                page = self.browser.page
+                if page:
+                    focused = await page.evaluate("() => document.activeElement?.tagName")
+                    if focused in ("BODY", "HTML", None):
+                        logger.info("🔄 Coordinate click missed input, trying DOM fallback...")
+                        desc_lower = element_description.lower()
+                        # Try to find a visible text input/search field
+                        selector = None
+                        if any(k in desc_lower for k in ["search", "input", "field", "text", "box", "type"]):
+                            selector = "input[type='text']:not([hidden]), input:not([type]):not([hidden]), textarea:not([hidden]), input[role='combobox']"
+                        if selector:
+                            el = await page.query_selector(selector)
+                            if el:
+                                box = await el.bounding_box()
+                                if box:
+                                    cx = box["x"] + box["width"] / 2
+                                    cy = box["y"] + box["height"] / 2
+                                    logger.info(f"🎯 DOM fallback click at ({cx}, {cy})")
+                                    result = await self.action_executor.execute(
+                                        ActionType.CLICK,
+                                        target=(cx, cy),
+                                        screenshot=screenshot
+                                    )
+            
+            # DOM button/link fallback: if click didn't seem to work, try finding button by text
+            if result.success and page:
+                desc_lower = (element_description or "").lower()
+                _btn_js = "(descText) => {" + """
+                    const keywords = descText.toLowerCase().split(' ');
+                    const candidates = Array.from(document.querySelectorAll('button, a, [onclick], [role="button"]'));
+                    for (const el of candidates) {
+                        const text = (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().toLowerCase();
+                        const matches = keywords.some(k => k.length > 2 && text.includes(k));
+                        if (matches && el.getBoundingClientRect().width > 0) {
+                            const box = el.getBoundingClientRect();
+                            return {x: box.x + box.width/2, y: box.y + box.height/2, found: true, text: text};
+                        }
+                    }
+                    return {found: false};
+                }"""
+                btn_data = await page.evaluate(_btn_js, desc_lower)
+                if btn_data and btn_data.get("found"):
+                    logger.info(f"🎯 DOM button fallback: found '{btn_data.get('text','')}' at ({btn_data['x']:.0f}, {btn_data['y']:.0f})")
+                    result = await self.action_executor.execute(
+                        ActionType.CLICK,
+                        target=(btn_data["x"], btn_data["y"]),
+                        screenshot=screenshot
+                    )
+            
+            return result
+        
+        elif action_type == "fill_field":
+            field_label = action.get("field_label", "")
+            field_value = action.get("field_value", "") or action.get("text", "")
+            page = self.browser.page
+            field_found = False
+            
+
+            result = None
+            
+            if page:
+                label_lower = field_label.lower()
+                el_data = await page.evaluate("""(labelText) => {
+                    const labels = Array.from(document.querySelectorAll('label'));
+                    for (const label of labels) {
+                        if (label.textContent.toLowerCase().includes(labelText)) {
+                            const input = label.htmlFor ? document.getElementById(label.htmlFor) : label.querySelector('input,textarea');
+                            if (input && input.getBoundingClientRect().width > 0) {
+                                input.focus();
+                                input.value = '';
+                                const box = input.getBoundingClientRect();
+                                return {x: box.x + box.width/2, y: box.y + box.height/2, found: true};
+                            }
+                        }
+                    }
+                    const inputs = Array.from(document.querySelectorAll('input:not([type=hidden]):not([type=radio]):not([type=checkbox]), textarea'));
+                    for (const inp of inputs) {
+                        const ph = (inp.placeholder || '').toLowerCase();
+                        const nm = (inp.name || '').toLowerCase();
+                        if (ph.includes(labelText) || nm.includes(labelText.replace(/ /g, ''))) {
+                            inp.focus();
+                            inp.value = '';
+                            const box = inp.getBoundingClientRect();
+                            return {x: box.x + box.width/2, y: box.y + box.height/2, found: true};
+                        }
+                    }
+                    return {found: false};
+                }""", label_lower)
+                
+                if el_data and el_data.get("found"):
+                    logger.info(f"Found field via DOM: %s", field_label)
+                    await self.action_executor.execute(ActionType.CLICK, target=(el_data["x"], el_data["y"]))
+                    await asyncio.sleep(0.2)
+                    result = await self.action_executor.execute(ActionType.TYPE_TEXT, value=field_value)
+                    field_found = True
+                    await asyncio.sleep(0.2)
+                    value = await page.evaluate("() => document.activeElement?.value || ''")
+                    if field_value in value:
+                        logger.info(f"Fill verified: %s=%s", field_label, field_value)
+                        return result
+            
+            if not field_found:
+                x = action.get("x", 0)
+                y = action.get("y", 0)
+                logger.info(f"Field not found via DOM, using coords (%s, %s)", x, y)
+                await self.action_executor.execute(ActionType.CLICK, target=(x, y))
+                await asyncio.sleep(0.2)
+                result = await self.action_executor.execute(ActionType.TYPE_TEXT, value=field_value)
+            
+            return result or ActionResult(success=True, action_type=ActionType.TYPE_TEXT)
         
         elif action_type == "type":
             text = action.get("text", "")
+            # Guard: skip if text looks like instructions (not a value to type)
+            if text and ("\n" in text or len(text) > 120):
+                logger.warning(f"Skipping type action with instruction-like text: {text[:80]}...")
+                return ActionResult(success=False, action_type=ActionType.TYPE_TEXT, error="text too long, looks like instructions not a value")
             return await self.action_executor.execute(
                 ActionType.TYPE_TEXT,
                 value=text,

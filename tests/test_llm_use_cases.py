@@ -23,10 +23,8 @@ from pathlib import Path
 from datetime import datetime
 
 # Skip all tests unless --run-llm-tests flag is provided
-pytestmark = pytest.mark.skipif(
-    not pytest.config.getoption("--run-llm-tests", default=False),
-    reason="Need --run-llm-tests option to run LLM integration tests"
-)
+# (handled via conftest.py or pytest marker instead)
+# pytestmark = pytest.mark.skip(reason="Need --run-llm-tests option to run LLM integration tests")
 
 
 def pytest_addoption(parser):

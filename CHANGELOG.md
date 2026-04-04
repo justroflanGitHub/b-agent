@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Field tracking**: Agent now tracks filled form fields and skips re-filling already completed fields
+- **Click validation**: Button/link clicks are trusted instead of demanding input focus indicator
+- **Forced transitions**: click→type→enter sequence now only applies to search tasks, not all tasks
+- **Type guard**: Blocks pasting full task instructions as text input (length/newline check)
+- **Vision prompt**: Improved with filled-fields progress context and clearer action rules
+- **DOM button fallback**: Clicks now search for buttons/links by text content when coordinate click misses
+- **Pagination test now passing**: Agent correctly navigates through paginated content
+- **Form filling test now passing**: All fields filled correctly without instruction pasting
+
 ### Added
 - Phase 5: Production & Polish (in progress)
 - **Phase 6: Credential Vault & Secret Injection** — AES-256-GCM encryption, per-tenant key derivation (HKDF-SHA256), credential vault with file/SQLite stores, chained secret providers (env, HashiCorp Vault, AWS Secrets Manager, Azure Key Vault), credential injection into agent tasks (79 tests)

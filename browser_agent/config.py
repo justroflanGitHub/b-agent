@@ -18,8 +18,8 @@ from pathlib import Path
 @dataclass
 class BrowserConfig:
     """Browser configuration settings."""
-    viewport_width: int = 2560
-    viewport_height: int = 1440
+    viewport_width: int = 1920
+    viewport_height: int = 1080
     headless: bool = False
     browser_type: str = "chromium"  # chromium, firefox, webkit
     max_tabs: int = 3
@@ -32,9 +32,9 @@ class BrowserConfig:
 class LLMConfig:
     """LLM configuration settings."""
     provider: str = "lmstudio"  # lmstudio, ollama, openai
-    base_url: str = "http://127.0.0.1:1234"
-    model: str = "mradermacher/ui-tars-1.5-7b"
-    vision_model: str = "mradermacher/ui-tars-1.5-7b"
+    base_url: str = "http://192.168.1.5:1234"
+    model: str = "ui-tars-1.5-7b@f16"
+    vision_model: str = "ui-tars-1.5-7b@f16"
     temperature: float = 0.1
     max_tokens: int = 4000
     timeout: int = 60  # seconds

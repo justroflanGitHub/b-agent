@@ -126,11 +126,11 @@ class TestLLMClient:
     
     def test_api_url(self, client):
         """Test API URL property."""
-        assert client.api_url == "http://127.0.0.1:1234"
+        assert client.api_url == "http://192.168.1.5:1234"
     
     def test_chat_endpoint(self, client):
         """Test chat endpoint property."""
-        assert client.chat_endpoint == "http://127.0.0.1:1234/v1/chat/completions"
+        assert client.chat_endpoint == "http://192.168.1.5:1234/v1/chat/completions"
     
     @pytest.mark.asyncio
     async def test_ensure_session(self, client):

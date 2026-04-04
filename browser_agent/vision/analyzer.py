@@ -325,7 +325,7 @@ Focus on:
 3. Modal/popup overlays
 4. Navigation elements
 
-Screenshot dimensions: 2560x1440
+Screenshot dimensions: 1920x1080
 Return up to 20 most important elements.
 """
         
@@ -492,7 +492,7 @@ Return JSON:
 
 If element not found, return {{"found": false}}
 
-Screenshot dimensions: 2560x1440
+Screenshot dimensions: 1920x1080
 """
         
         response = await self.vision_client.chat_with_image(prompt, screenshot)
@@ -576,7 +576,7 @@ Return JSON:
 }}
 
 Return up to {max_results} best matches.
-Screenshot dimensions: 2560x1440
+Screenshot dimensions: 1920x1080
 """
         
         response = await self.vision_client.chat_with_image(prompt, screenshot)

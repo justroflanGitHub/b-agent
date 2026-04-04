@@ -36,8 +36,8 @@ class TestBrowserConfig:
         """Test default configuration values."""
         config = BrowserConfig()
         
-        assert config.viewport_width == 2560
-        assert config.viewport_height == 1440
+        assert config.viewport_width == 1920
+        assert config.viewport_height == 1080
         assert config.headless == False
         assert config.browser_type == "chromium"
         assert config.max_tabs == 3
@@ -68,8 +68,8 @@ class TestLLMConfig:
         config = LLMConfig()
         
         assert config.provider == "lmstudio"
-        assert config.base_url == "http://127.0.0.1:1234"
-        assert config.model == "mradermacher/ui-tars-1.5-7b"
+        assert config.base_url == "http://192.168.1.5:1234"
+        assert config.model == "ui-tars-1.5-7b@f16"
         assert config.temperature == 0.1
         assert config.max_tokens == 4000
         assert config.timeout == 60
@@ -209,7 +209,7 @@ class TestConfig:
         """Test loading from nonexistent YAML file returns defaults."""
         config = Config.from_yaml("/nonexistent/path/config.yaml")
         
-        assert config.browser.viewport_width == 2560  # Default value
+        assert config.browser.viewport_width == 1920  # Default value
     
     def test_ensure_directories(self):
         """Test directory creation."""
@@ -234,7 +234,7 @@ class TestGetConfig:
         config = get_config()
         
         assert isinstance(config, Config)
-        assert config.browser.viewport_width == 2560
+        assert config.browser.viewport_width == 1920
     
     def test_env_override(self, monkeypatch):
         """Test environment variable overrides."""

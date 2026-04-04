@@ -489,20 +489,15 @@ Screenshot dimensions: 2560x1440
         prompt = f"""You are a precise coordinate detection tool. Analyze the screenshot and find the exact center coordinates for: "{element_description}"
 
 SCREENSHOT DIMENSIONS: {viewport_width}x{viewport_height} (width x height)
+IMPORTANT: These are the exact dimensions. Use coordinates relative to these dimensions only.
 
 CRITICAL COORDINATE RULES:
 1. Look at the screenshot CAREFULLY and identify the EXACT pixel coordinates
 2. Coordinates must be within the screenshot bounds:
    - X: 0 to {viewport_width}
    - Y: 0 to {viewport_height}
-
-IMPORTANT FOR GOOGLE.COM:
-- The search bar is CENTERED horizontally around X: {viewport_width // 2}
-- Google.com search field coordinates: x=xxxx, y=yyy
-- Google.com search field coordinates is around X=1280, y=650
-- Look for the actual search box position
+3. Do NOT use hardcoded or memorized coordinates - read the screenshot to find the actual element position
 - Provide REAL coordinates based on what you see in the screenshot. Don't use generic coordinates.
-- if user uses dark mode, the search bar is lighter, if user uses light mode, the search bar is darker
 
 Return JSON with the center coordinates:
 {{

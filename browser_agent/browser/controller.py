@@ -189,7 +189,7 @@ class BrowserController:
             
             if not self.browser_config.headless:
                 # Calculate window position to center on screen
-                # Assume screen is 2560x1440, window will be viewport size
+                # Window will be viewport size from config
                 window_width = self.browser_config.viewport_width
                 window_height = self.browser_config.viewport_height
                 
@@ -251,7 +251,7 @@ class BrowserController:
         logger.info(f"Created new page (total: {len(self._pages)})")
         return page
     
-    async def goto(self, url: str, wait_until: str = "networkidle", timeout: Optional[int] = None):
+    async def goto(self, url: str, wait_until: str = "domcontentloaded", timeout: Optional[int] = None):
         """Navigate to URL."""
         if not self._current_page:
             await self.new_page()
