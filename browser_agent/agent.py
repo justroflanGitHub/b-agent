@@ -302,6 +302,52 @@ class BrowserAgent:
                 
                 action_type = action.get("type")
                 
+                # Break scroll loops: if 3+ consecutive scrolls, force a different action
+                if action_type == "scroll_down" and len(last_actions) >= 3:
+                    recent_types = [a.get("type") for a in last_actions[-3:]]
+                    if recent_types == ["scroll_down", "scroll_down", "scroll_down"]:
+                        logger.info("🔄 Breaking scroll loop - forcing click action")
+                        page = self.browser.page
+                        if page:
+                            # Scroll back to top first to find buttons
+                            await page.evaluate("window.scrollTo(0, 0)")
+                            await asyncio.sleep(0.3)
+                            # If we're on a different page than expected, go back
+                            current_url = page.url
+                            if "cart" in current_url or "checkout" in current_url:
+                                logger.info(f"🔄 On {current_url}, going back to find products")
+                                await page.go_back()
+                                await asyncio.sleep(0.5)
+                            _loop_js = "() => {" + """
+                                const btns = Array.from(document.querySelectorAll('button, [role="button"]'));
+                                const matches = [];
+                                for (const btn of btns) {
+                                    const text = (btn.textContent || '').trim().toLowerCase();
+                                    matches.push(text.substring(0, 30));
+                                    if (text.includes('add') || text.includes('cart') || text.includes('buy') || text.includes('order')) {
+                                        const box = btn.getBoundingClientRect();
+                                        if (box.width > 0) return {x: box.x + box.width/2, y: box.y + box.height/2, found: true, text: text};
+                                    }
+                                }
+                                return {found: false, all: matches};
+                            }"""
+                            btn_data = await page.evaluate(_loop_js)
+                            logger.info(f"🔄 Scroll loop button search: {btn_data}")
+                            if btn_data and btn_data.get("found"):
+                                action_type = "click"
+                                action = {
+                                    "type": "click",
+                                    "x": btn_data["x"],
+                                    "y": btn_data["y"],
+                                    "description": f"Click {btn_data.get('text','button')} to break scroll loop"
+                                }
+                                logger.info(f"🔄 Found button via DOM: {btn_data.get('text')} at ({btn_data['x']:.0f}, {btn_data['y']:.0f})")
+                            else:
+                                # No button found, force complete
+                                action_type = "complete"
+                                action = {"type": "complete", "complete": True, "result": "No more actions found after scrolling"}
+                                logger.info("🔄 No actionable buttons found, forcing complete")
+                
                 # Prevent repeating the same action after success
                 if last_actions:
                     last_successful = [a for a in last_actions if a.get("success")]
@@ -1027,17 +1073,20 @@ Screenshot: {self.config.browser.viewport_width}x{self.config.browser.viewport_h
             if result.success and page:
                 desc_lower = (element_description or "").lower()
                 _btn_js = "(descText) => {" + """
-                    const keywords = descText.toLowerCase().split(' ');
-                    const candidates = Array.from(document.querySelectorAll('button, a, [onclick], [role="button"]'));
+                    const keywords = descText.toLowerCase().split(' ').filter(k => k.length > 2);
+                    const candidates = Array.from(document.querySelectorAll('button, [onclick], [role="button"]'));
+                    let bestMatch = null;
+                    let bestScore = 0;
                     for (const el of candidates) {
                         const text = (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().toLowerCase();
-                        const matches = keywords.some(k => k.length > 2 && text.includes(k));
-                        if (matches && el.getBoundingClientRect().width > 0) {
+                        const matchCount = keywords.filter(k => text.includes(k)).length;
+                        if (matchCount > bestScore && el.getBoundingClientRect().width > 0) {
                             const box = el.getBoundingClientRect();
-                            return {x: box.x + box.width/2, y: box.y + box.height/2, found: true, text: text};
+                            bestScore = matchCount;
+                            bestMatch = {x: box.x + box.width/2, y: box.y + box.height/2, found: true, text: text.substring(0, 50), score: matchCount};
                         }
                     }
-                    return {found: false};
+                    return bestMatch || {found: false};
                 }"""
                 btn_data = await page.evaluate(_btn_js, desc_lower)
                 if btn_data and btn_data.get("found"):
