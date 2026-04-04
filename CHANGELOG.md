@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Ecommerce Add to Cart test now passing**: Scroll loop breaker with DOM button search, navigates back from cart page
 - **UI Button Click test now passing**: Already passing with button click validation fixes
 - **UI Form Validation test now passing**: Field tracking now allows re-filling with different values
+- **Prompt improvement**: Added rule about gray placeholder text meaning empty fields
 - **DOM button fallback**: Uses best-score matching, excludes plain links to avoid cart icon false matches
 - **Search click validation**: Accepts when search button is focused instead of input field
 - **Button click validation**: Also checks goal text for button-like intent, not just action description

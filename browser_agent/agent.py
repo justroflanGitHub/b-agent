@@ -986,10 +986,11 @@ Return JSON:
 
 Rules:
 1. For form fields, prefer fill_field over click+type. field_value must be ONLY the short value (e.g. "John"), never instructions.
-2. After a successful fill_field, proceed to the NEXT unfilled field.
-3. Do NOT interact with fields already listed as completed above.
-4. Do NOT repeat actions that already succeeded.
-5. When all tasks are done, return type "complete".
+2. Gray placeholder text (like "Enter email...") means the field is EMPTY - it still needs to be filled.
+3. After a successful fill_field, proceed to the NEXT unfilled field.
+4. Do NOT interact with fields already listed as completed above.
+5. Do NOT repeat actions that already succeeded.
+6. When all tasks are done, return type "complete".
 
 Screenshot: {self.config.browser.viewport_width}x{self.config.browser.viewport_height}
 """
