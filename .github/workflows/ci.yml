@@ -33,11 +33,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Install Playwright
-        run: |
-          pip install playwright
-          playwright install chromium
+        run: pip install pytest pytest-timeout playwright -r requirements.txt
+      - name: Install Playwright browsers
+        run: playwright install chromium
       - name: Run unit tests
         run: python -m pytest tests/ -v --tb=short -x -k "not vision and not integration" --timeout=60
 
@@ -51,11 +49,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Install Playwright
-        run: |
-          pip install playwright
-          playwright install chromium
+        run: pip install pytest pytest-timeout playwright -r requirements.txt
+      - name: Install Playwright browsers
+        run: playwright install chromium
       - name: Run integration tests
         run: python -m pytest tests/test_integration_use_cases.py -v --tb=short --timeout=300
         env:
