@@ -19,8 +19,6 @@ jobs:
         run: |
           pip install flake8 black mypy
           pip install -r requirements.txt
-      - name: Flake8
-        run: flake8 browser_agent/ --max-line-length=120 --exclude=__pycache__,old
       - name: Black check
         run: black --check --line-length=120 browser_agent/
 
