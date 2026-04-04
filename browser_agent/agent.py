@@ -551,7 +551,28 @@ class BrowserAgent:
                     "reason": "Not on search results page - no results found"
                 }
             
-            # For non-search tasks, use vision validation
+            # For non-search tasks, check DOM for success indicators first, then use vision
+            page = self.browser.page
+            if page:
+                try:
+                    dom_check = await page.evaluate("""() => {
+                        // Check for common success indicators
+                        const successSelectors = ['.success', '.alert-success', '.login-success', '.message.success', '[class*=success]', '#success'];
+                        for (const sel of successSelectors) {
+                            const el = document.querySelector(sel);
+                            if (el && el.offsetWidth > 0) return {found: true, text: el.textContent.trim().substring(0, 200)};
+                        }
+                        // Check URL for dashboard/redirect
+                        if (location.pathname.includes('dashboard') || location.pathname.includes('welcome') || location.pathname.includes('home')) return {found: true, text: 'Redirected to ' + location.pathname};
+                        return {found: false};
+                    }""")
+                    if dom_check and dom_check.get("found"):
+                        logger.info(f"✅ DOM completion check: {dom_check.get('text')}")
+                        return {"success": True, "reason": dom_check.get('text', 'Success indicator found')}
+                except Exception as e:
+                    logger.debug(f"DOM completion check failed: {e}")
+            
+            # Fall back to vision validation
             validation_prompt = f"""Look at this screenshot and determine if this task is complete:
 
 Task: {goal}
