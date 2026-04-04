@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pagination test now passing**: Agent correctly navigates through paginated content
 - **Load More test now passing**: Agent correctly clicks Load More button repeatedly
 - **Basic Search test now passing**: Fixed search completion validation for client-side search pages
+- **Login Workflow test now passing**: Already passing with button click + field tracking fixes
 - **Search click validation**: Accepts when search button is focused instead of input field
 - **Button click validation**: Also checks goal text for button-like intent, not just action description
 - **Form filling test now passing**: All fields filled correctly without instruction pasting
