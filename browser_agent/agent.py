@@ -670,7 +670,8 @@ Return JSON:
                     }
             
             # Check if a button was clicked (not an input field click)
-            is_button_click = any(kw in action_desc for kw in ["next", "previous", "submit", "button", "click", "load more", "tab", "modal", "toggle", "expand", "open", "close", "confirm", "agree", "check"])
+            goal_lower = goal.lower()
+            is_button_click = any(kw in action_desc for kw in ["next", "previous", "submit", "button", "click", "load more", "tab", "modal", "toggle", "expand", "open", "close", "confirm", "agree", "check"]) or any(kw in goal_lower for kw in ["click the", "load more", "pagination", "next", "navigate", "submit", "button"])
             
             if is_button_click:
                 # For button clicks, trust the action if coordinates were valid
