@@ -5,28 +5,54 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: nettyan-browser-agent
+      target: ${DOCKER_TARGET:-production}
+    container_name: browser-agent
     environment:
       - BROWSER_HEADLESS=true
-      - BROWSER_AGENT_DEBUG=false
-      - BROWSER_AGENT_MOCK_ACTIONS=false
-      - LM_STUDIO_URL=http://host.docker.internal:1234
-      - UI_MODEL=ui-tars-1.5-7b
-      - SEARCH_QUERY=${SEARCH_QUERY:-}
+      - DISPLAY=:99
+      - PYTHONPATH=/app
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://host.docker.internal:1234}
+      - LLM_MODEL=${LLM_MODEL:-ui-tars-1.5-7b@f16}
+      - BROWSER_AGENT_DEBUG=${DEBUG:-false}
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - ../data:/app/data
+      - ../logs:/app/logs
+      - ../screenshots:/app/screenshots
     ports:
-      - "8080:8080"
-    # Connect to host LM Studio
+      - "${API_PORT:-8080}:8080"
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # network_mode: host  # Commented out - using port mapping instead for Windows compatibility
-    # For interactive mode (if supported by your Docker setup)
     stdin_open: true
     tty: true
-    # Default to API mode via CMD in Dockerfile
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # Test runner service
+  browser-agent-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: browser-agent-test
+    environment:
+      - BROWSER_HEADLESS=true
+      - DISPLAY=:99
+      - PYTHONPATH=/app
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://host.docker.internal:1234}
+      - LLM_MODEL=${LLM_MODEL:-ui-tars-1.5-7b@f16}
+    volumes:
+      - ..:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    profiles:
+      - test
+    command: ["test"]
 
 networks:
   default:
-    name: nettyan-network
+    name: browser-agent-network

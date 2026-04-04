@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Docker**: Multi-stage Dockerfile (dev + production) with Playwright/Chromium
+- **Docker Compose**: Production + test runner services with health checks
+- **CI/CD**: GitHub Actions pipeline (lint → unit tests → integration tests → Docker build → security scan)
+- **Docker modes**: api, cli, test, test-integration entrypoint modes
+- **.dockerignore**: Optimized Docker build context
+
 ### Fixed
 - **Field tracking**: Agent now tracks filled form fields and skips re-filling already completed fields
 - **Click validation**: Button/link clicks are trusted instead of demanding input focus indicator

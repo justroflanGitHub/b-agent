@@ -1,67 +1,51 @@
 #!/bin/bash
+set -e
 
-echo "🚀 Starting Simple Browser Agent Docker Container"
-echo "=================================================="
+echo "🤖 Browser Agent - Starting"
+echo "============================"
 
-# Set up virtual display for headless browser operation
-export DISPLAY=:99
-echo "Setting up virtual display..."
+# Start virtual display (Xvfb) for headless browser
 Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
+XVFB_PID=$!
+sleep 1
 
-# Wait for Xvfb to start
-sleep 2
-echo "✅ Virtual display ready"
-
-# Ensure Playwright browsers are available
-echo "Checking Playwright browsers..."
-if ! playwright install --dry-run chromium >/dev/null 2>&1; then
-    echo "Installing Playwright browsers..."
-    playwright install chromium
-    echo "✅ Playwright browsers installed"
-else
-    echo "✅ Playwright browsers already available"
+# Verify display is running
+if ! kill -0 $XVFB_PID 2>/dev/null; then
+    echo "❌ Failed to start Xvfb"
+    exit 1
 fi
+echo "✅ Virtual display ready (DISPLAY=:99)"
 
-# Change to app directory
-cd /app
+export DISPLAY=:99
+export PYTHONPATH=/app
 
-# Determine run mode
-if [ "$1" = "api" ]; then
-    echo "🌐 Starting API server mode..."
-    python simple_browser_api.py
-elif [ "$1" = "test" ]; then
-    echo "🧪 Starting test mode..."
-    # For test mode, we can pass a search query via environment variable
-    if [ -n "$SEARCH_QUERY" ]; then
-        echo "🔍 Using search query from environment: '$SEARCH_QUERY'"
-        python -c "
-import asyncio
-from simple_browser_agent import execute_browser_task
+MODE="${1:-api}"
 
-async def run_test():
-    result = await execute_browser_task('$SEARCH_QUERY', 'https://www.google.com')
-    print('Test completed:', result)
-
-asyncio.run(run_test())
-"
-    else
-        echo "❌ SEARCH_QUERY environment variable not set for test mode"
-        echo "Usage: docker run -e SEARCH_QUERY='your search query' <image> test"
+case "$MODE" in
+    api)
+        echo "🌐 Starting API server on port 8080..."
+        exec python -m browser_agent.api.app
+        ;;
+    cli)
+        shift
+        if [ -z "$1" ]; then
+            echo "Usage: docker run <image> cli \"your task description\""
+            exit 1
+        fi
+        echo "🎯 Running task: $*"
+        exec python run_agent.py --headless "$@"
+        ;;
+    test)
+        echo "🧪 Running tests..."
+        exec python -m pytest tests/ -v --tb=short -x
+        ;;
+    test-integration)
+        echo "🧪 Running integration tests..."
+        exec python -m pytest tests/test_integration_use_cases.py -v --tb=short
+        ;;
+    *)
+        echo "Unknown mode: $MODE"
+        echo "Usage: docker run <image> [api|cli|test|test-integration]"
         exit 1
-    fi
-else
-    echo "🤖 Starting interactive mode..."
-    echo ""
-    echo "Simple Browser Agent - Docker Interactive Mode"
-    echo "=============================================="
-    echo ""
-    echo "This mode allows you to enter search queries interactively."
-    echo "However, Docker containers may not support interactive input by default."
-    echo ""
-    echo "For interactive usage, consider:"
-    echo "1. Using API mode: docker run -p 8080:8080 <image> api"
-    echo "2. Using test mode: docker run -e SEARCH_QUERY='your query' <image> test"
-    echo ""
-    echo "Starting API server instead for web access..."
-    python simple_browser_api.py
-fi
+        ;;
+esac

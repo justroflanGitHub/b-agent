@@ -1,19 +1,20 @@
-FROM python:3.10-slim
+FROM python:3.11-slim AS base
 
-# Set working directory
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
 WORKDIR /app
 
-# Install system dependencies for browser automation
-RUN apt-get update && apt-get install -y \
+# Install system dependencies for Playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     libgtk-3-0 \
     libnotify-dev \
     libnss3 \
     libxss1 \
     libasound2 \
-    wget \
-    curl \
-    fonts-liberation \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
     libcups2 \
@@ -25,37 +26,58 @@ RUN apt-get update && apt-get install -y \
     libxfixes3 \
     libxrandr2 \
     xdg-utils \
+    fonts-liberation \
+    wget \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements-browser.txt /tmp/requirements-browser.txt
-RUN pip install --no-cache-dir -r /tmp/requirements-browser.txt
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Install additional dependencies for interactive input
-RUN pip install --no-cache-dir aiohttp
+# Install Playwright and Chromium
+RUN pip install --no-cache-dir playwright && \
+    playwright install chromium && \
+    playwright install-deps chromium
 
-# Set up virtual display for headless browser operation
+# Create directories
+RUN mkdir -p /app/data /app/logs /app/checkpoints /app/screenshots
+
+# ---- Development stage ----
+FROM base AS development
+
+# Install dev dependencies
+RUN pip install --no-cache-dir pytest pytest-asyncio black flake8 mypy
+
+# Copy source
+COPY . /app
+
+# Set up virtual display
 ENV DISPLAY=:99
 ENV BROWSER_HEADLESS=true
 
-# Install Playwright and browsers
-RUN pip install playwright
-RUN playwright install chromium
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
+CMD ["api"]
 
-# Create necessary directories
-RUN mkdir -p /app/data/screenshots /app/logs /app/models
+# ---- Production stage ----
+FROM base AS production
 
-# Copy application code
+# Copy only necessary files
+COPY browser_agent/ /app/browser_agent/
+COPY run_agent.py /app/run_agent.py
 COPY docker/entrypoint.sh /app/entrypoint.sh
-COPY simple_browser_agent.py /app/simple_browser_agent.py
-COPY simple_browser_api.py /app/simple_browser_api.py
 RUN chmod +x /app/entrypoint.sh
 
-# Set environment variables
+# Set up virtual display
+ENV DISPLAY=:99
+ENV BROWSER_HEADLESS=true
 ENV PYTHONPATH=/app
-ENV BROWSER_AGENT_DEBUG=false
-ENV BROWSER_AGENT_MOCK_ACTIONS=false
 
-# Set entrypoint and default command
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+EXPOSE 8080
+
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["api"]
