@@ -16,7 +16,7 @@ from .recovery import RecoveryOrchestrator, RecoveryResult, RecoveryStatus, Reco
 __all__ = [
     # Checkpoint system
     "CheckpointManager",
-    "Checkpoint", 
+    "Checkpoint",
     "BrowserState",
     "CheckpointType",
     # Fallback strategies

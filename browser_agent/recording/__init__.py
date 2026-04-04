@@ -7,9 +7,16 @@ from .adaptive_replay import AdaptiveReplay
 from .version_control import RecordingVersionControl, RecordingDiff
 
 __all__ = [
-    "WorkflowRecorder", "Recording", "RecordedAction", "RecordingParameter",
-    "WorkflowPlayer", "ReplayMode", "ReplayResult", "ReplayStepResult",
+    "WorkflowRecorder",
+    "Recording",
+    "RecordedAction",
+    "RecordingParameter",
+    "WorkflowPlayer",
+    "ReplayMode",
+    "ReplayResult",
+    "ReplayStepResult",
     "RecordingParameterizer",
     "AdaptiveReplay",
-    "RecordingVersionControl", "RecordingDiff",
+    "RecordingVersionControl",
+    "RecordingDiff",
 ]

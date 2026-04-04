@@ -3,8 +3,6 @@
 import csv
 import io
 import json
-from datetime import datetime
-from typing import List
 
 
 class AuditExporter:
@@ -22,29 +20,45 @@ class AuditExporter:
             return ""
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow([
-            "event_id", "timestamp", "event_type", "tenant_id", "user_id",
-            "task_id", "step_index", "action_type", "target_url", "target_element",
-            "outcome", "error_message", "data_sensitivity", "session_id", "agent_id",
-        ])
+        writer.writerow(
+            [
+                "event_id",
+                "timestamp",
+                "event_type",
+                "tenant_id",
+                "user_id",
+                "task_id",
+                "step_index",
+                "action_type",
+                "target_url",
+                "target_element",
+                "outcome",
+                "error_message",
+                "data_sensitivity",
+                "session_id",
+                "agent_id",
+            ]
+        )
         for e in events:
-            writer.writerow([
-                e.event_id,
-                e.timestamp.isoformat(),
-                e.event_type.value,
-                e.tenant_id,
-                e.user_id,
-                e.task_id,
-                e.step_index,
-                e.action_type,
-                e.target_url,
-                e.target_element,
-                e.outcome,
-                e.error_message,
-                e.data_sensitivity.value if e.data_sensitivity else "",
-                e.session_id,
-                e.agent_id,
-            ])
+            writer.writerow(
+                [
+                    e.event_id,
+                    e.timestamp.isoformat(),
+                    e.event_type.value,
+                    e.tenant_id,
+                    e.user_id,
+                    e.task_id,
+                    e.step_index,
+                    e.action_type,
+                    e.target_url,
+                    e.target_element,
+                    e.outcome,
+                    e.error_message,
+                    e.data_sensitivity.value if e.data_sensitivity else "",
+                    e.session_id,
+                    e.agent_id,
+                ]
+            )
         return output.getvalue()
 
     @staticmethod
@@ -55,6 +69,7 @@ class AuditExporter:
             severity = "Low"
             if e.data_sensitivity:
                 from .audit_log import SensitivityLevel
+
                 mapping = {
                     SensitivityLevel.PUBLIC: "Low",
                     SensitivityLevel.INTERNAL: "Low",

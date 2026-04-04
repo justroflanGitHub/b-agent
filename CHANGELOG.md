@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DOM button fallback**: Uses best-score matching, excludes plain links to avoid cart icon false matches
 - **Prompt restructured**: xLAM-style [BEGIN/END] sections with explicit tool definitions and parameter schemas
 - **JSON parser**: Backward compatible - handles both new tool_calls format and old flat format
+- **Lint cleanup**: black formatting, autoflake unused imports, flake8 fixes on agent.py
 - **Search click validation**: Accepts when search button is focused instead of input field
 - **Button click validation**: Also checks goal text for button-like intent, not just action description
 - **Form filling test now passing**: All fields filled correctly without instruction pasting

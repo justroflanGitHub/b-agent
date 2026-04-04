@@ -20,7 +20,7 @@ from .agent import BrowserAgent, TaskResult, create_agent
 __all__ = [
     # Config
     "Config",
-    "get_config", 
+    "get_config",
     "default_config",
     # Browser
     "BrowserController",

@@ -19,8 +19,9 @@ class PolicyEffect(Enum):
 @dataclass
 class PolicyCondition:
     """A single condition in a policy rule."""
-    field: str       # "target_url", "action_type", "sensitivity", "tenant_id", "user_id"
-    operator: str    # "equals", "contains", "matches", "in", "not_equals", "not_contains", "not_matches"
+
+    field: str  # "target_url", "action_type", "sensitivity", "tenant_id", "user_id"
+    operator: str  # "equals", "contains", "matches", "in", "not_equals", "not_contains", "not_matches"
     value: Any
 
     def evaluate(self, context: Dict[str, Any]) -> bool:
@@ -54,8 +55,9 @@ class PolicyCondition:
 @dataclass
 class ApprovalConfig:
     """Configuration for an approval gate."""
+
     approvers: List[str] = field(default_factory=list)
-    approval_type: str = "single"           # "single", "quorum", "escalation"
+    approval_type: str = "single"  # "single", "quorum", "escalation"
     timeout_seconds: int = 3600
     auto_deny_on_timeout: bool = True
     escalation_approvers: Optional[List[str]] = None
@@ -67,6 +69,7 @@ class ApprovalConfig:
 @dataclass
 class PolicyRule:
     """A governance policy rule."""
+
     rule_id: str
     name: str
     description: str = ""
@@ -90,15 +93,16 @@ class PolicyRule:
             "name": self.name,
             "description": self.description,
             "effect": self.effect.value,
-            "conditions": [
-                {"field": c.field, "operator": c.operator, "value": c.value}
-                for c in self.conditions
-            ],
-            "approval_config": {
-                "approval_type": self.approval_config.approval_type,
-                "approvers": self.approval_config.approvers,
-                "timeout_seconds": self.approval_config.timeout_seconds,
-            } if self.approval_config else None,
+            "conditions": [{"field": c.field, "operator": c.operator, "value": c.value} for c in self.conditions],
+            "approval_config": (
+                {
+                    "approval_type": self.approval_config.approval_type,
+                    "approvers": self.approval_config.approvers,
+                    "timeout_seconds": self.approval_config.timeout_seconds,
+                }
+                if self.approval_config
+                else None
+            ),
             "priority": self.priority,
             "enabled": self.enabled,
             "tenant_id": self.tenant_id,
@@ -109,6 +113,7 @@ class PolicyRule:
 @dataclass
 class PolicyContext:
     """Context for policy evaluation."""
+
     action_type: str = ""
     target_url: str = ""
     target_element: Optional[str] = None
@@ -142,6 +147,7 @@ class PolicyContext:
 @dataclass
 class PolicyDecision:
     """Result of policy evaluation."""
+
     effect: PolicyEffect
     matched_rule: Optional[PolicyRule] = None
     reason: str = ""
@@ -156,11 +162,8 @@ class PolicyEngine:
     First matching rule wins. If no rules match, default effect is ALLOW.
     """
 
-    def __init__(self, rules: Optional[List[PolicyRule]] = None,
-                 default_effect: PolicyEffect = PolicyEffect.ALLOW):
-        self._rules: List[PolicyRule] = sorted(
-            rules or [], key=lambda r: -r.priority
-        )
+    def __init__(self, rules: Optional[List[PolicyRule]] = None, default_effect: PolicyEffect = PolicyEffect.ALLOW):
+        self._rules: List[PolicyRule] = sorted(rules or [], key=lambda r: -r.priority)
         self._default_effect = default_effect
 
     @property

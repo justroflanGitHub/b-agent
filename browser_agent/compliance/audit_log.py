@@ -198,6 +198,7 @@ class AuditEvent:
 @dataclass
 class AuditFilter:
     """Filter for querying audit events."""
+
     tenant_id: Optional[str] = None
     event_types: Optional[List[AuditEventType]] = None
     task_id: Optional[str] = None
@@ -212,6 +213,7 @@ class AuditFilter:
 @dataclass
 class TaskTimeline:
     """Full timeline of events for a task."""
+
     task_id: str
     events: List[AuditEvent]
     total_duration: Optional[float] = None
@@ -223,6 +225,7 @@ class TaskTimeline:
 @dataclass
 class ComplianceReport:
     """Generated compliance report."""
+
     framework: str
     tenant_id: str
     period_start: datetime
@@ -287,12 +290,14 @@ class SQLiteAuditStore(AuditStore):
 
     def __init__(self, path: str = ".audit/audit.db"):
         import os
+
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         self._path = path
         self._init_db()
 
     def _init_db(self):
         import sqlite3
+
         conn = sqlite3.connect(self._path)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS audit_events (
@@ -328,10 +333,12 @@ class SQLiteAuditStore(AuditStore):
 
     def _get_conn(self):
         import sqlite3
+
         return sqlite3.connect(self._path)
 
     def _event_to_row(self, event: AuditEvent) -> tuple:
         import json
+
         return (
             event.event_id,
             event.timestamp.isoformat(),
@@ -358,6 +365,7 @@ class SQLiteAuditStore(AuditStore):
 
     def _row_to_event(self, row: tuple) -> AuditEvent:
         import json
+
         ds = row[13]
         return AuditEvent(
             event_id=row[0],
@@ -474,16 +482,19 @@ class FileAuditStore(AuditStore):
 
     def __init__(self, path: str = ".audit"):
         import os
+
         os.makedirs(path, exist_ok=True)
         self._path = path
 
     def _tenant_file(self, tenant_id: str) -> str:
         import os
+
         safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in tenant_id)
         return os.path.join(self._path, f"audit_{safe}.jsonl")
 
     async def append(self, event: AuditEvent) -> str:
         import json
+
         with open(self._tenant_file(event.tenant_id), "a", encoding="utf-8") as f:
             f.write(json.dumps(event.to_dict(), default=str) + "\n")
         return event.event_id
@@ -643,7 +654,10 @@ class AuditLog:
 
         logger.debug(
             "Audit: %s tenant=%s task=%s outcome=%s",
-            event_type.value, tenant_id, task_id, outcome,
+            event_type.value,
+            tenant_id,
+            task_id,
+            outcome,
         )
 
         return event
@@ -654,18 +668,22 @@ class AuditLog:
 
     async def get_task_timeline(self, task_id: str, tenant_id: str = "default") -> TaskTimeline:
         """Get full timeline of events for a task."""
-        events = await self._store.query(AuditFilter(
-            tenant_id=tenant_id,
-            task_id=task_id,
-            limit=10000,
-        ))
+        events = await self._store.query(
+            AuditFilter(
+                tenant_id=tenant_id,
+                task_id=task_id,
+                limit=10000,
+            )
+        )
 
         success = sum(1 for e in events if e.outcome == "success")
         failure = sum(1 for e in events if e.outcome == "failure")
         duration = None
-        task_events = [e for e in events if e.event_type in (
-            AuditEventType.TASK_STARTED, AuditEventType.TASK_COMPLETED, AuditEventType.TASK_FAILED
-        )]
+        task_events = [
+            e
+            for e in events
+            if e.event_type in (AuditEventType.TASK_STARTED, AuditEventType.TASK_COMPLETED, AuditEventType.TASK_FAILED)
+        ]
         if len(task_events) >= 2:
             start = task_events[0].timestamp
             end = task_events[-1].timestamp
@@ -675,19 +693,26 @@ class AuditLog:
             task_id=task_id,
             events=events,
             total_duration=duration,
-            action_count=len([e for e in events if e.event_type in (
-                AuditEventType.ACTION_EXECUTED, AuditEventType.ACTION_SUCCEEDED, AuditEventType.ACTION_FAILED
-            )]),
+            action_count=len(
+                [
+                    e
+                    for e in events
+                    if e.event_type
+                    in (AuditEventType.ACTION_EXECUTED, AuditEventType.ACTION_SUCCEEDED, AuditEventType.ACTION_FAILED)
+                ]
+            ),
             success_count=success,
             failure_count=failure,
         )
 
     async def verify_chain(self, tenant_id: str) -> "ChainVerificationResult":
         """Verify integrity of the entire audit chain for a tenant."""
-        events = await self._store.query(AuditFilter(
-            tenant_id=tenant_id,
-            limit=100000,
-        ))
+        events = await self._store.query(
+            AuditFilter(
+                tenant_id=tenant_id,
+                limit=100000,
+            )
+        )
         return self._chain.verify(events)
 
     async def generate_compliance_report(
@@ -698,12 +723,14 @@ class AuditLog:
         tenant_id: str = "default",
     ) -> ComplianceReport:
         """Generate a compliance report for a time period."""
-        events = await self._store.query(AuditFilter(
-            tenant_id=tenant_id,
-            start_time=start_date,
-            end_time=end_date,
-            limit=100000,
-        ))
+        events = await self._store.query(
+            AuditFilter(
+                tenant_id=tenant_id,
+                start_time=start_date,
+                end_time=end_date,
+                limit=100000,
+            )
+        )
 
         report = ComplianceReport(
             framework=framework,
@@ -733,19 +760,25 @@ class AuditLog:
 
         # Findings
         if report.failed_tasks > report.completed_tasks:
-            report.findings.append({
-                "severity": "warning",
-                "message": f"More tasks failed ({report.failed_tasks}) than completed ({report.completed_tasks})",
-            })
+            report.findings.append(
+                {
+                    "severity": "warning",
+                    "message": f"More tasks failed ({report.failed_tasks}) than completed ({report.completed_tasks})",
+                }
+            )
         if report.dlp_violations > 0:
-            report.findings.append({
-                "severity": "critical",
-                "message": f"{report.dlp_violations} DLP violations detected",
-            })
+            report.findings.append(
+                {
+                    "severity": "critical",
+                    "message": f"{report.dlp_violations} DLP violations detected",
+                }
+            )
         if not report.chain_integrity:
-            report.findings.append({
-                "severity": "critical",
-                "message": "Audit chain integrity verification failed — possible tampering",
-            })
+            report.findings.append(
+                {
+                    "severity": "critical",
+                    "message": "Audit chain integrity verification failed — possible tampering",
+                }
+            )
 
         return report

@@ -30,6 +30,7 @@ class BusinessCalendar:
         if self._holidays_country:
             try:
                 import holidays as hol
+
                 if self._holidays_cache is None or self._holidays_cache[0] != date.year:
                     self._holidays_cache = (
                         date.year,
@@ -49,14 +50,10 @@ class BusinessCalendar:
         candidate = after
         for _ in range(366):
             if self.is_weekend(candidate):
-                candidate = (candidate + timedelta(days=1)).replace(
-                    hour=hours[0], minute=0, second=0, microsecond=0
-                )
+                candidate = (candidate + timedelta(days=1)).replace(hour=hours[0], minute=0, second=0, microsecond=0)
                 continue
             if self.is_holiday(candidate):
-                candidate = (candidate + timedelta(days=1)).replace(
-                    hour=hours[0], minute=0, second=0, microsecond=0
-                )
+                candidate = (candidate + timedelta(days=1)).replace(hour=hours[0], minute=0, second=0, microsecond=0)
                 continue
             if not self.is_business_hours(candidate, hours):
                 if candidate.hour >= hours[1]:
@@ -64,9 +61,7 @@ class BusinessCalendar:
                         hour=hours[0], minute=0, second=0, microsecond=0
                     )
                 else:
-                    candidate = candidate.replace(
-                        hour=hours[0], minute=0, second=0, microsecond=0
-                    )
+                    candidate = candidate.replace(hour=hours[0], minute=0, second=0, microsecond=0)
                 continue
             return candidate
         return after + timedelta(days=365)

@@ -9,7 +9,7 @@ import hashlib
 import hmac
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
@@ -145,9 +145,7 @@ class CryptoEngine:
             data = aesgcm.decrypt(blob.iv, ct_and_tag, None)
         else:
             # Verify tag
-            expected_tag = hashlib.sha256(
-                blob.iv + blob.ciphertext + self._master_key
-            ).digest()[:16]
+            expected_tag = hashlib.sha256(blob.iv + blob.ciphertext + self._master_key).digest()[:16]
             if not hmac.compare_digest(expected_tag, blob.tag):
                 raise ValueError("Authentication tag mismatch — data may be tampered")
             data = self._xor_with_keystream(blob.ciphertext, blob.iv)
@@ -176,9 +174,7 @@ class CryptoEngine:
             return hkdf.derive(self._master_key)
         else:
             # Fallback: HMAC-based derivation
-            return hmac.new(
-                self._master_key, context.encode("utf-8"), hashlib.sha256
-            ).digest()
+            return hmac.new(self._master_key, context.encode("utf-8"), hashlib.sha256).digest()
 
     def derive_child_engine(self, context: str) -> "CryptoEngine":
         """Create a child CryptoEngine with a derived key."""
@@ -188,9 +184,7 @@ class CryptoEngine:
         engine._backend = self._backend
         return engine
 
-    def rotate_key(
-        self, new_key: bytes, blobs: list
-    ) -> list:
+    def rotate_key(self, new_key: bytes, blobs: list) -> list:
         """Re-encrypt a list of EncryptedBlobs with a new master key.
 
         Returns a list of new EncryptedBlobs encrypted with new_key.

@@ -23,8 +23,7 @@ class Notifier(ABC):
 class WebhookNotifier(Notifier):
     """Generic webhook notifier — POST JSON to a URL."""
 
-    def __init__(self, url: str, headers: Optional[Dict[str, str]] = None,
-                 secret: Optional[str] = None):
+    def __init__(self, url: str, headers: Optional[Dict[str, str]] = None, secret: Optional[str] = None):
         self._url = url
         self._headers = headers or {}
         self._secret = secret
@@ -56,13 +55,17 @@ class WebhookNotifier(Notifier):
     async def _post(self, payload: dict) -> bool:
         try:
             import aiohttp
+
             headers = {"Content-Type": "application/json", **self._headers}
             async with aiohttp.ClientSession() as session:
-                async with session.post(self._url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                async with session.post(
+                    self._url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
                     return resp.status < 400
         except ImportError:
             # Fallback: use urllib
             import urllib.request
+
             req = urllib.request.Request(
                 self._url,
                 data=json.dumps(payload).encode(),
@@ -90,16 +93,32 @@ class SlackNotifier(Notifier):
     async def send_approval_request(self, request) -> bool:
         blocks = [
             {"type": "section", "text": {"type": "mrkdwn", "text": f"⚠️ *Approval Required*\n{request.description}"}},
-            {"type": "section", "fields": [
-                {"type": "mrkdwn", "text": f"*Task:* `{request.task_id}`"},
-                {"type": "mrkdwn", "text": f"*Requested by:* {request.requested_by}"},
-            ]},
-            {"type": "actions", "elements": [
-                {"type": "button", "text": {"type": "plain_text", "text": "✅ Approve"}, "style": "primary",
-                 "value": request.request_id, "action_id": f"approve_{request.request_id}"},
-                {"type": "button", "text": {"type": "plain_text", "text": "❌ Deny"}, "style": "danger",
-                 "value": request.request_id, "action_id": f"deny_{request.request_id}"},
-            ]},
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Task:* `{request.task_id}`"},
+                    {"type": "mrkdwn", "text": f"*Requested by:* {request.requested_by}"},
+                ],
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "✅ Approve"},
+                        "style": "primary",
+                        "value": request.request_id,
+                        "action_id": f"approve_{request.request_id}",
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "❌ Deny"},
+                        "style": "danger",
+                        "value": request.request_id,
+                        "action_id": f"deny_{request.request_id}",
+                    },
+                ],
+            },
         ]
         payload = {"blocks": blocks}
         if self._channel:
@@ -116,6 +135,7 @@ class SlackNotifier(Notifier):
     async def _post_slack(self, payload: dict) -> bool:
         try:
             import urllib.request
+
             req = urllib.request.Request(
                 self._webhook_url,
                 data=json.dumps(payload).encode(),
@@ -140,14 +160,16 @@ class TeamsNotifier(Notifier):
             "@context": "http://schema.org/extensions",
             "themeColor": "FF6600",
             "summary": "Approval Required",
-            "sections": [{
-                "activityTitle": "⚠️ Approval Required",
-                "facts": [
-                    {"name": "Task", "value": request.task_id},
-                    {"name": "Description", "value": request.description},
-                    {"name": "Requested by", "value": request.requested_by},
-                ],
-            }],
+            "sections": [
+                {
+                    "activityTitle": "⚠️ Approval Required",
+                    "facts": [
+                        {"name": "Task", "value": request.task_id},
+                        {"name": "Description", "value": request.description},
+                        {"name": "Requested by", "value": request.requested_by},
+                    ],
+                }
+            ],
         }
         return await self._post_teams(card)
 
@@ -158,19 +180,22 @@ class TeamsNotifier(Notifier):
             "@context": "http://schema.org/extensions",
             "themeColor": color,
             "summary": f"Request {request.status.value}",
-            "sections": [{
-                "activityTitle": f"Request {request.status.value.title()}",
-                "facts": [
-                    {"name": "Request ID", "value": request.request_id},
-                    {"name": "Resolved by", "value": request.resolved_by or "N/A"},
-                ],
-            }],
+            "sections": [
+                {
+                    "activityTitle": f"Request {request.status.value.title()}",
+                    "facts": [
+                        {"name": "Request ID", "value": request.request_id},
+                        {"name": "Resolved by", "value": request.resolved_by or "N/A"},
+                    ],
+                }
+            ],
         }
         return await self._post_teams(card)
 
     async def _post_teams(self, card: dict) -> bool:
         try:
             import urllib.request
+
             req = urllib.request.Request(
                 self._webhook_url,
                 data=json.dumps(card).encode(),
@@ -186,9 +211,13 @@ class TeamsNotifier(Notifier):
 class EmailNotifier(Notifier):
     """Email notification (SMTP). Logs for now — real SMTP in production config."""
 
-    def __init__(self, smtp_host: str = "", smtp_port: int = 587,
-                 from_address: str = "bot@localhost",
-                 approver_mapping: Optional[Dict[str, str]] = None):
+    def __init__(
+        self,
+        smtp_host: str = "",
+        smtp_port: int = 587,
+        from_address: str = "bot@localhost",
+        approver_mapping: Optional[Dict[str, str]] = None,
+    ):
         self._smtp_host = smtp_host
         self._smtp_port = smtp_port
         self._from = from_address
@@ -197,14 +226,16 @@ class EmailNotifier(Notifier):
     async def send_approval_request(self, request) -> bool:
         logger.info(
             "📧 Approval email: %s for request %s",
-            request.description, request.request_id,
+            request.description,
+            request.request_id,
         )
         return True
 
     async def send_resolution(self, request) -> bool:
         logger.info(
             "📧 Resolution email: %s for request %s",
-            request.status.value, request.request_id,
+            request.status.value,
+            request.request_id,
         )
         return True
 

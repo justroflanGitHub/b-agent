@@ -9,14 +9,14 @@ This module provides specialized skills for complex browser automation tasks:
 
 Usage:
     from browser_agent.skills import SkillManager, create_skill_manager_for_agent
-    
+
     # Create skill manager
     manager = SkillManager(browser, vision, executor)
     manager.register_defaults()
-    
+
     # Execute a skill
     result = await manager.fill_form(schema, data)
-    
+
     # Or integrate with agent
     manager = create_skill_manager_for_agent(agent)
 """

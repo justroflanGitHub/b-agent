@@ -1,9 +1,8 @@
 """Recording version control — diff, rollback, and version management."""
 
-import json
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 
 from .recorder import Recording, RecordingStore
 
@@ -13,6 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RecordingDiff:
     """Difference between two recording versions."""
+
     version_a: int = 0
     version_b: int = 0
     actions_added: List[int] = field(default_factory=list)

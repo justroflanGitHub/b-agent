@@ -94,16 +94,8 @@ class CredentialEntry:
             metadata=data.get("metadata", {}),
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
-            expires_at=(
-                datetime.fromisoformat(data["expires_at"])
-                if data.get("expires_at")
-                else None
-            ),
-            last_used_at=(
-                datetime.fromisoformat(data["last_used_at"])
-                if data.get("last_used_at")
-                else None
-            ),
+            expires_at=(datetime.fromisoformat(data["expires_at"]) if data.get("expires_at") else None),
+            last_used_at=(datetime.fromisoformat(data["last_used_at"]) if data.get("last_used_at") else None),
             rotation_policy=RotationPolicy(data.get("rotation_policy", "none")),
             rotation_interval_days=data.get("rotation_interval_days", 90),
             use_count_for_rotation=data.get("use_count_for_rotation", 100),
@@ -375,12 +367,8 @@ class SQLiteCredentialStore(CredentialStore):
                 UNIQUE(alias, tenant_id)
             )
         """)
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_tenant ON credentials(tenant_id)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_expires ON credentials(expires_at)"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_tenant ON credentials(tenant_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_expires ON credentials(expires_at)")
         conn.commit()
         conn.close()
 
@@ -482,9 +470,7 @@ class SQLiteCredentialStore(CredentialStore):
     async def list_aliases(self, tenant_id: str) -> List[str]:
         conn = self._get_conn()
         try:
-            cursor = conn.execute(
-                "SELECT alias FROM credentials WHERE tenant_id=?", (tenant_id,)
-            )
+            cursor = conn.execute("SELECT alias FROM credentials WHERE tenant_id=?", (tenant_id,))
             return [row[0] for row in cursor.fetchall()]
         finally:
             conn.close()
@@ -492,9 +478,7 @@ class SQLiteCredentialStore(CredentialStore):
     async def list_entries(self, tenant_id: str) -> List[CredentialEntry]:
         conn = self._get_conn()
         try:
-            cursor = conn.execute(
-                "SELECT * FROM credentials WHERE tenant_id=?", (tenant_id,)
-            )
+            cursor = conn.execute("SELECT * FROM credentials WHERE tenant_id=?", (tenant_id,))
             return [self._row_to_entry(row) for row in cursor.fetchall()]
         finally:
             conn.close()
@@ -670,9 +654,7 @@ class CredentialVault:
         # Check expiry
         now = datetime.now(timezone.utc)
         if entry.expires_at and entry.expires_at < now:
-            raise ValueError(
-                f"Credential expired: {alias} (expired at {entry.expires_at.isoformat()})"
-            )
+            raise ValueError(f"Credential expired: {alias} (expired at {entry.expires_at.isoformat()})")
 
         # Decrypt
         tenant_crypto = self._crypto.derive_child_engine(tenant_id)
@@ -802,7 +784,7 @@ class CredentialVault:
         """Find credentials approaching or past expiry."""
         # Note: this only checks known tenants. For multi-tenant,
         # the orchestration layer should iterate tenants.
-        now = datetime.now(timezone.utc)
+        datetime.now(timezone.utc)
         results: List[ExpiringCredential] = []
         return results  # Populated by orchestration layer with tenant context
 
@@ -857,13 +839,9 @@ class CredentialVault:
         resolved = {}
         for key, value in data.items():
             if isinstance(value, str) and "${vault:" in value:
-                resolved[key] = await self.resolve_placeholder(
-                    value, tenant_id, requested_by
-                )
+                resolved[key] = await self.resolve_placeholder(value, tenant_id, requested_by)
             elif isinstance(value, dict):
-                resolved[key] = await self.resolve_in_dict(
-                    value, tenant_id, requested_by
-                )
+                resolved[key] = await self.resolve_in_dict(value, tenant_id, requested_by)
             else:
                 resolved[key] = value
         return resolved

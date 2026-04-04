@@ -1,8 +1,5 @@
 """Recurring task definitions."""
 
-import json
-import os
-import sqlite3
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -14,6 +11,7 @@ from .cron_schedule import CronSchedule
 @dataclass
 class RecurringTask:
     """A recurring browser automation task."""
+
     task_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     description: str = ""
@@ -115,8 +113,12 @@ class RecurringTask:
             resume_from_checkpoint=data.get("resume_from_checkpoint", True),
             notify_on_success=data.get("notify_on_success", []),
             notify_on_failure=data.get("notify_on_failure", []),
-            created_at=datetime.fromisoformat(data["created_at"]) if data.get("created_at") else datetime.now(timezone.utc),
-            updated_at=datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else datetime.now(timezone.utc),
+            created_at=(
+                datetime.fromisoformat(data["created_at"]) if data.get("created_at") else datetime.now(timezone.utc)
+            ),
+            updated_at=(
+                datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else datetime.now(timezone.utc)
+            ),
             run_count=data.get("run_count", 0),
             success_count=data.get("success_count", 0),
             failure_count=data.get("failure_count", 0),
@@ -135,6 +137,7 @@ class RecurringTask:
 @dataclass
 class TaskRun:
     """Record of a single task execution."""
+
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     task_id: str = ""
     started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

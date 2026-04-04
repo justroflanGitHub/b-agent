@@ -5,14 +5,7 @@ FastAPI-based REST API for browser automation tasks.
 """
 
 from .app import create_app
-from .models import (
-    TaskRequest,
-    TaskStatus,
-    TaskResult,
-    SessionInfo,
-    HealthStatus,
-    MetricsResponse
-)
+from .models import TaskRequest, TaskStatus, TaskResult, SessionInfo, HealthStatus, MetricsResponse
 from .task_manager import TaskManager
 
 __all__ = [
@@ -23,5 +16,5 @@ __all__ = [
     "SessionInfo",
     "HealthStatus",
     "MetricsResponse",
-    "TaskManager"
+    "TaskManager",
 ]

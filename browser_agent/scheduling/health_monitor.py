@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ScheduleAnomaly:
     task_id: str
-    anomaly_type: str      # "missed_run", "duration_spike", "success_rate_drop", "stuck_checkpoint"
-    severity: str          # "warning", "critical"
+    anomaly_type: str  # "missed_run", "duration_spike", "success_rate_drop", "stuck_checkpoint"
+    severity: str  # "warning", "critical"
     details: str
     detected_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -43,13 +43,11 @@ class ScheduleHealthReport:
 class ScheduleHealthMonitor:
     """Monitor scheduled task health and alert on issues."""
 
-    def __init__(self, success_rate_threshold: float = 0.8,
-                 duration_spike_factor: float = 3.0):
+    def __init__(self, success_rate_threshold: float = 0.8, duration_spike_factor: float = 3.0):
         self._success_rate_threshold = success_rate_threshold
         self._duration_spike_factor = duration_spike_factor
 
-    def check_health(self, tasks: List[RecurringTask],
-                     recent_runs: dict = None) -> ScheduleHealthReport:
+    def check_health(self, tasks: List[RecurringTask], recent_runs: dict = None) -> ScheduleHealthReport:
         """Check all tasks' health.
 
         Args:
@@ -73,12 +71,14 @@ class ScheduleHealthMonitor:
                 rate = successes / len(runs) if runs else 1.0
                 if rate < self._success_rate_threshold:
                     is_healthy = False
-                    report.anomalies.append(ScheduleAnomaly(
-                        task_id=task.task_id,
-                        anomaly_type="success_rate_drop",
-                        severity="critical" if rate < 0.5 else "warning",
-                        details=f"Success rate: {rate:.0%} (threshold: {self._success_rate_threshold:.0%})",
-                    ))
+                    report.anomalies.append(
+                        ScheduleAnomaly(
+                            task_id=task.task_id,
+                            anomaly_type="success_rate_drop",
+                            severity="critical" if rate < 0.5 else "warning",
+                            details=f"Success rate: {rate:.0%} (threshold: {self._success_rate_threshold:.0%})",
+                        )
+                    )
                     is_degraded = True
 
             # Check for duration spikes
@@ -88,24 +88,28 @@ class ScheduleHealthMonitor:
                     avg_recent = sum(recent_durations) / len(recent_durations)
                     if avg_recent > task.expected_duration * self._duration_spike_factor:
                         is_healthy = False
-                        report.anomalies.append(ScheduleAnomaly(
-                            task_id=task.task_id,
-                            anomaly_type="duration_spike",
-                            severity="warning",
-                            details=f"Avg duration: {avg_recent:.0f}s (expected: {task.expected_duration:.0f}s)",
-                        ))
+                        report.anomalies.append(
+                            ScheduleAnomaly(
+                                task_id=task.task_id,
+                                anomaly_type="duration_spike",
+                                severity="warning",
+                                details=f"Avg duration: {avg_recent:.0f}s (expected: {task.expected_duration:.0f}s)",
+                            )
+                        )
                         is_degraded = True
 
             # Check for stuck checkpoint (same checkpoint used repeatedly)
             if runs:
                 checkpoints = [r.checkpoint_used for r in runs if r.checkpoint_used]
                 if len(checkpoints) >= 3 and len(set(checkpoints)) == 1:
-                    report.anomalies.append(ScheduleAnomaly(
-                        task_id=task.task_id,
-                        anomaly_type="stuck_checkpoint",
-                        severity="warning",
-                        details=f"Same checkpoint used {len(checkpoints)} times in a row",
-                    ))
+                    report.anomalies.append(
+                        ScheduleAnomaly(
+                            task_id=task.task_id,
+                            anomaly_type="stuck_checkpoint",
+                            severity="warning",
+                            details=f"Same checkpoint used {len(checkpoints)} times in a row",
+                        )
+                    )
                     is_degraded = True
 
             if is_healthy and not is_degraded:
@@ -138,8 +142,7 @@ class ScheduleHealthMonitor:
             )
         return None
 
-    def detect_anomalies(self, tasks: List[RecurringTask],
-                         recent_runs: dict = None) -> List[ScheduleAnomaly]:
+    def detect_anomalies(self, tasks: List[RecurringTask], recent_runs: dict = None) -> List[ScheduleAnomaly]:
         """Detect anomalies across all tasks."""
         report = self.check_health(tasks, recent_runs)
         return report.anomalies

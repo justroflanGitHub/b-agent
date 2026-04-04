@@ -10,7 +10,7 @@ The Analyzer Agent is responsible for:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 import uuid
 
@@ -24,6 +24,7 @@ from .base import (
 
 class AnalysisType(Enum):
     """Types of analysis that can be performed."""
+
     FULL_PAGE = "full_page"
     ELEMENT_DETECTION = "element_detection"
     FORM_ANALYSIS = "form_analysis"
@@ -35,6 +36,7 @@ class AnalysisType(Enum):
 
 class PageState(Enum):
     """Possible states of a page."""
+
     LOADING = "loading"
     READY = "ready"
     ERROR = "error"
@@ -47,6 +49,7 @@ class PageState(Enum):
 @dataclass
 class ElementInfo:
     """Information about a detected element."""
+
     element_id: str
     element_type: str  # button, input, link, etc.
     tag_name: str
@@ -59,7 +62,7 @@ class ElementInfo:
     attributes: Dict[str, str] = field(default_factory=dict)
     confidence: float = 1.0
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -81,6 +84,7 @@ class ElementInfo:
 @dataclass
 class FormField:
     """Information about a form field."""
+
     field_id: str
     field_type: str  # text, email, password, select, checkbox, radio, textarea
     label: Optional[str] = None
@@ -89,7 +93,7 @@ class FormField:
     is_required: bool = False
     validation_rules: Dict[str, Any] = field(default_factory=dict)
     element_info: Optional[ElementInfo] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -107,6 +111,7 @@ class FormField:
 @dataclass
 class AnalysisResult:
     """Result from page analysis."""
+
     analysis_id: str
     analysis_type: AnalysisType
     page_state: PageState
@@ -119,7 +124,7 @@ class AnalysisResult:
     recommendations: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -136,17 +141,17 @@ class AnalysisResult:
             "metadata": self.metadata,
             "timestamp": self.timestamp.isoformat(),
         }
-    
+
     def find_element_by_type(self, element_type: str) -> List[ElementInfo]:
         """Find elements by type."""
         return [e for e in self.elements if e.element_type == element_type]
-    
+
     def find_element_by_text(self, text: str, exact: bool = False) -> List[ElementInfo]:
         """Find elements containing text."""
         if exact:
             return [e for e in self.elements if e.text_content == text]
         return [e for e in self.elements if e.text_content and text.lower() in e.text_content.lower()]
-    
+
     def find_interactive_elements(self) -> List[ElementInfo]:
         """Find all interactive elements."""
         return [e for e in self.elements if e.is_interactive]
@@ -155,6 +160,7 @@ class AnalysisResult:
 @dataclass
 class AnalysisRequest:
     """Request for page analysis."""
+
     analysis_type: AnalysisType
     url: Optional[str] = None
     screenshot: Optional[bytes] = None
@@ -169,7 +175,7 @@ class AnalysisRequest:
 class AnalyzerAgent(BaseAgent):
     """
     Agent responsible for analyzing web pages.
-    
+
     Capabilities:
     - Full page analysis
     - Element detection and classification
@@ -177,7 +183,7 @@ class AnalyzerAgent(BaseAgent):
     - Content extraction
     - State detection
     """
-    
+
     def __init__(
         self,
         config: Optional[AgentConfig] = None,
@@ -195,15 +201,15 @@ class AnalyzerAgent(BaseAgent):
         super().__init__(config)
         self._browser = browser
         self._vision_client = vision_client
-    
+
     def set_browser(self, browser: Any) -> None:
         """Set the browser instance."""
         self._browser = browser
-    
+
     def set_vision_client(self, vision_client: Any) -> None:
         """Set the vision client."""
         self._vision_client = vision_client
-    
+
     async def execute(self, task: Any) -> AgentResult:
         """Execute an analysis task."""
         if isinstance(task, AnalysisRequest):
@@ -222,16 +228,16 @@ class AnalyzerAgent(BaseAgent):
                 task_id="unknown",
                 error=f"Unknown task type: {type(task)}",
             )
-    
+
     async def analyze(self, request: AnalysisRequest) -> AnalysisResult:
         """Perform page analysis."""
         analysis_id = str(uuid.uuid4())
-        
+
         # Get current page info if browser is available
         url = request.url or ""
         title = None
         html_content = request.html_content
-        
+
         if self._browser:
             try:
                 page = self._browser.get_current_page()
@@ -242,24 +248,16 @@ class AnalyzerAgent(BaseAgent):
                         html_content = await page.content()
             except Exception:
                 pass
-        
+
         # Perform analysis based on type
         if request.analysis_type == AnalysisType.FULL_PAGE:
-            result = await self._analyze_full_page(
-                analysis_id, url, title, html_content, request
-            )
+            result = await self._analyze_full_page(analysis_id, url, title, html_content, request)
         elif request.analysis_type == AnalysisType.ELEMENT_DETECTION:
-            result = await self._detect_elements(
-                analysis_id, url, title, html_content, request
-            )
+            result = await self._detect_elements(analysis_id, url, title, html_content, request)
         elif request.analysis_type == AnalysisType.FORM_ANALYSIS:
-            result = await self._analyze_forms(
-                analysis_id, url, title, html_content, request
-            )
+            result = await self._analyze_forms(analysis_id, url, title, html_content, request)
         elif request.analysis_type == AnalysisType.STATE_CHECK:
-            result = await self._check_state(
-                analysis_id, url, title, html_content, request
-            )
+            result = await self._check_state(analysis_id, url, title, html_content, request)
         else:
             result = AnalysisResult(
                 analysis_id=analysis_id,
@@ -268,9 +266,9 @@ class AnalyzerAgent(BaseAgent):
                 url=url,
                 title=title,
             )
-        
+
         return result
-    
+
     async def _analyze_full_page(
         self,
         analysis_id: str,
@@ -280,16 +278,10 @@ class AnalyzerAgent(BaseAgent):
         request: AnalysisRequest,
     ) -> AnalysisResult:
         """Perform full page analysis."""
-        elements = await self._detect_elements(
-            analysis_id, url, title, html_content, request
-        )
-        forms = await self._analyze_forms(
-            analysis_id, url, title, html_content, request
-        )
-        state = await self._check_state(
-            analysis_id, url, title, html_content, request
-        )
-        
+        elements = await self._detect_elements(analysis_id, url, title, html_content, request)
+        forms = await self._analyze_forms(analysis_id, url, title, html_content, request)
+        state = await self._check_state(analysis_id, url, title, html_content, request)
+
         # Combine results
         result = AnalysisResult(
             analysis_id=analysis_id,
@@ -302,9 +294,9 @@ class AnalyzerAgent(BaseAgent):
             text_content=await self._extract_text(html_content),
             recommendations=self._generate_recommendations(elements.elements),
         )
-        
+
         return result
-    
+
     async def _detect_elements(
         self,
         analysis_id: str,
@@ -315,7 +307,7 @@ class AnalyzerAgent(BaseAgent):
     ) -> AnalysisResult:
         """Detect and classify elements on the page."""
         elements = []
-        
+
         # Use vision client if available and screenshot provided
         if self._vision_client and request.screenshot:
             try:
@@ -324,7 +316,7 @@ class AnalyzerAgent(BaseAgent):
                 elements.extend(visual_elements)
             except Exception:
                 pass
-        
+
         # Use browser for DOM-based detection
         if self._browser:
             try:
@@ -332,15 +324,15 @@ class AnalyzerAgent(BaseAgent):
                 elements.extend(dom_elements)
             except Exception:
                 pass
-        
+
         # Filter by requested types
         if request.element_types:
             elements = [e for e in elements if e.element_type in request.element_types]
-        
+
         # Filter invisible if needed
         if not request.include_invisible:
             elements = [e for e in elements if e.is_visible]
-        
+
         return AnalysisResult(
             analysis_id=analysis_id,
             analysis_type=AnalysisType.ELEMENT_DETECTION,
@@ -349,7 +341,7 @@ class AnalyzerAgent(BaseAgent):
             title=title,
             elements=elements,
         )
-    
+
     async def _analyze_forms(
         self,
         analysis_id: str,
@@ -360,14 +352,14 @@ class AnalyzerAgent(BaseAgent):
     ) -> AnalysisResult:
         """Analyze forms on the page."""
         forms = []
-        
+
         if self._browser:
             try:
                 page = self._browser.get_current_page()
                 if page:
                     # Find all forms
                     form_elements = await page.query_selector_all("form")
-                    
+
                     for form_idx, form in enumerate(form_elements):
                         form_info = {
                             "form_id": f"form_{form_idx}",
@@ -375,19 +367,19 @@ class AnalyzerAgent(BaseAgent):
                             "method": await form.get_attribute("method") or "get",
                             "fields": [],
                         }
-                        
+
                         # Get all input fields
                         inputs = await form.query_selector_all("input, select, textarea")
-                        
+
                         for field_idx, input_el in enumerate(inputs):
                             field_type = await input_el.get_attribute("type") or "text"
                             tag_name = await input_el.evaluate("el => el.tagName.toLowerCase()")
-                            
+
                             if tag_name == "select":
                                 field_type = "select"
                             elif tag_name == "textarea":
                                 field_type = "textarea"
-                            
+
                             # Get label
                             label = None
                             name = await input_el.get_attribute("name")
@@ -398,7 +390,7 @@ class AnalyzerAgent(BaseAgent):
                                         label = await label_el.text_content()
                                 except Exception:
                                     pass
-                            
+
                             field_info = FormField(
                                 field_id=f"field_{form_idx}_{field_idx}",
                                 field_type=field_type,
@@ -407,13 +399,13 @@ class AnalyzerAgent(BaseAgent):
                                 placeholder=await input_el.get_attribute("placeholder"),
                                 is_required=await input_el.get_attribute("required") is not None,
                             )
-                            
+
                             form_info["fields"].append(field_info.to_dict())
-                        
+
                         forms.append(form_info)
             except Exception:
                 pass
-        
+
         return AnalysisResult(
             analysis_id=analysis_id,
             analysis_type=AnalysisType.FORM_ANALYSIS,
@@ -422,7 +414,7 @@ class AnalyzerAgent(BaseAgent):
             title=title,
             forms=forms,
         )
-    
+
     async def _check_state(
         self,
         analysis_id: str,
@@ -434,7 +426,7 @@ class AnalyzerAgent(BaseAgent):
         """Check the current state of the page."""
         page_state = PageState.READY
         issues = []
-        
+
         if self._browser:
             try:
                 page = self._browser.get_current_page()
@@ -443,20 +435,22 @@ class AnalyzerAgent(BaseAgent):
                     ready_state = await page.evaluate("document.readyState")
                     if ready_state != "complete":
                         page_state = PageState.LOADING
-                    
+
                     # Check for error indicators
                     error_selectors = [".error", "#error", ".alert-error", "[role='alert']"]
                     for selector in error_selectors:
                         error_el = await page.query_selector(selector)
                         if error_el:
                             error_text = await error_el.text_content()
-                            issues.append({
-                                "type": "error_message",
-                                "message": error_text,
-                                "selector": selector,
-                            })
+                            issues.append(
+                                {
+                                    "type": "error_message",
+                                    "message": error_text,
+                                    "selector": selector,
+                                }
+                            )
                             page_state = PageState.ERROR
-                    
+
                     # Check for modal
                     modal_selectors = [".modal", "[role='dialog']", ".popup", ".overlay"]
                     for selector in modal_selectors:
@@ -468,7 +462,7 @@ class AnalyzerAgent(BaseAgent):
                                 break
             except Exception:
                 pass
-        
+
         return AnalysisResult(
             analysis_id=analysis_id,
             analysis_type=AnalysisType.STATE_CHECK,
@@ -477,11 +471,11 @@ class AnalyzerAgent(BaseAgent):
             title=title,
             issues=issues,
         )
-    
+
     async def _detect_elements_visual(self, screenshot: bytes) -> List[ElementInfo]:
         """Detect elements using visual analysis."""
         elements = []
-        
+
         if self._vision_client:
             try:
                 # Use vision client to detect elements
@@ -489,46 +483,56 @@ class AnalyzerAgent(BaseAgent):
                 pass
             except Exception:
                 pass
-        
+
         return elements
-    
+
     async def _detect_elements_dom(self, request: AnalysisRequest) -> List[ElementInfo]:
         """Detect elements using DOM analysis."""
         elements = []
-        
+
         if self._browser:
             try:
                 page = self._browser.get_current_page()
                 if page:
                     # Interactive element selectors
                     selectors = request.selectors or [
-                        "button", "a", "input", "select", "textarea",
-                        "[onclick]", "[role='button']", "[tabindex]",
+                        "button",
+                        "a",
+                        "input",
+                        "select",
+                        "textarea",
+                        "[onclick]",
+                        "[role='button']",
+                        "[tabindex]",
                     ]
-                    
+
                     for selector in selectors:
                         els = await page.query_selector_all(selector)
                         for idx, el in enumerate(els):
                             is_visible = await el.is_visible()
-                            
+
                             if not is_visible and not request.include_invisible:
                                 continue
-                            
+
                             # Get element info
                             tag_name = await el.evaluate("el => el.tagName.toLowerCase()")
                             text_content = await el.text_content()
                             element_id = await el.get_attribute("id")
                             class_name = await el.get_attribute("class")
-                            
+
                             # Get bounding box
                             bbox = await el.bounding_box()
-                            
+
                             # Determine element type
                             element_type = self._classify_element(tag_name, await el.get_attribute("type"))
-                            
+
                             # Build selector
-                            css_selector = element_id and f"#{element_id}" or f"{tag_name}.{class_name}" if class_name else tag_name
-                            
+                            css_selector = (
+                                element_id and f"#{element_id}" or f"{tag_name}.{class_name}"
+                                if class_name
+                                else tag_name
+                            )
+
                             element_info = ElementInfo(
                                 element_id=f"el_{len(elements)}",
                                 element_type=element_type,
@@ -544,13 +548,13 @@ class AnalyzerAgent(BaseAgent):
                                     "type": await el.get_attribute("type") or "",
                                 },
                             )
-                            
+
                             elements.append(element_info)
             except Exception:
                 pass
-        
+
         return elements
-    
+
     def _classify_element(self, tag_name: str, input_type: Optional[str]) -> str:
         """Classify element type."""
         if tag_name == "input":
@@ -584,7 +588,7 @@ class AnalyzerAgent(BaseAgent):
         elif tag_name in ["p", "span", "div"]:
             return "text"
         return "element"
-    
+
     async def _extract_text(self, html_content: Optional[str]) -> Optional[str]:
         """Extract text content from HTML."""
         if self._browser:
@@ -595,28 +599,28 @@ class AnalyzerAgent(BaseAgent):
             except Exception:
                 pass
         return None
-    
+
     def _generate_recommendations(self, elements: List[ElementInfo]) -> List[str]:
         """Generate recommendations based on analysis."""
         recommendations = []
-        
+
         # Check for interactive elements
         interactive = [e for e in elements if e.is_interactive]
         if not interactive:
             recommendations.append("No interactive elements found on the page")
-        
+
         # Check for forms
         forms = [e for e in elements if e.element_type in ["text_input", "select", "textarea", "checkbox", "radio"]]
         if forms:
             recommendations.append(f"Found {len(forms)} form fields that may need to be filled")
-        
+
         # Check for buttons
         buttons = [e for e in elements if e.element_type == "button"]
         if buttons:
             recommendations.append(f"Found {len(buttons)} buttons available for interaction")
-        
+
         return recommendations
-    
+
     async def find_element(
         self,
         description: str,
@@ -627,17 +631,17 @@ class AnalyzerAgent(BaseAgent):
             analysis_type=AnalysisType.ELEMENT_DETECTION,
             element_types=[element_type] if element_type else None,
         )
-        
+
         result = await self.analyze(request)
-        
+
         # Search by text content
         matches = result.find_element_by_text(description)
-        
+
         if matches:
             return matches[0]
-        
+
         return None
-    
+
     async def get_page_state(self) -> PageState:
         """Get the current page state."""
         request = AnalysisRequest(analysis_type=AnalysisType.STATE_CHECK)

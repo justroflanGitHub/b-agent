@@ -5,7 +5,6 @@ restored after processing (e.g., after LLM call).
 """
 
 import hashlib
-import re
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -13,16 +12,17 @@ from typing import Any, Dict, List, Optional
 
 
 class RedactionStrategy(Enum):
-    MASK = "mask"            # "123-45-6789" → "12*******9"
-    REPLACE = "replace"      # "123-45-6789" → "[SSN]"
-    HASH = "hash"            # "123-45-6789" → "[SSN:a1b2c3]"
-    REMOVE = "remove"        # "my SSN is 123-45-6789" → "my SSN is "
-    PARTIAL = "partial"      # "John Smith" → "J*** S***"
+    MASK = "mask"  # "123-45-6789" → "12*******9"
+    REPLACE = "replace"  # "123-45-6789" → "[SSN]"
+    HASH = "hash"  # "123-45-6789" → "[SSN:a1b2c3]"
+    REMOVE = "remove"  # "my SSN is 123-45-6789" → "my SSN is "
+    PARTIAL = "partial"  # "John Smith" → "J*** S***"
 
 
 @dataclass
 class RedactedText:
     """Result of redacting text."""
+
     original_hash: str
     redacted_text: str
     redaction_count: int
@@ -99,11 +99,11 @@ class DataRedactor:
 
         for match in sorted_matches:
             original = match.value
-            pii_type = match.pii_type.value if hasattr(match, 'pii_type') else "unknown"
+            pii_type = match.pii_type.value if hasattr(match, "pii_type") else "unknown"
             redacted_types.add(pii_type)
 
             replacement = self._apply_strategy(original, pii_type, token_map)
-            result = result[:match.start] + replacement + result[match.end:]
+            result = result[: match.start] + replacement + result[match.end :]
 
         original_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
 

@@ -27,6 +27,7 @@ class TenantStatus(Enum):
 @dataclass
 class Tenant:
     """A single tenant with resource limits and feature flags."""
+
     tenant_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     plan: TenantPlan = TenantPlan.STARTER
@@ -41,14 +42,16 @@ class Tenant:
     max_steps_per_task: int = 50
 
     # Feature flags
-    features: Dict[str, bool] = field(default_factory=lambda: {
-        "credential_vault": True,
-        "audit_log": True,
-        "dlp": False,
-        "scheduling": False,
-        "recording": False,
-        "governance": False,
-    })
+    features: Dict[str, bool] = field(
+        default_factory=lambda: {
+            "credential_vault": True,
+            "audit_log": True,
+            "dlp": False,
+            "scheduling": False,
+            "recording": False,
+            "governance": False,
+        }
+    )
 
     # Isolation scopes
     credential_scope: str = ""
@@ -112,8 +115,12 @@ class Tenant:
             credential_scope=data.get("credential_scope", ""),
             audit_scope=data.get("audit_scope", ""),
             data_scope=data.get("data_scope", ""),
-            created_at=datetime.fromisoformat(data["created_at"]) if data.get("created_at") else datetime.now(timezone.utc),
-            updated_at=datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else datetime.now(timezone.utc),
+            created_at=(
+                datetime.fromisoformat(data["created_at"]) if data.get("created_at") else datetime.now(timezone.utc)
+            ),
+            updated_at=(
+                datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else datetime.now(timezone.utc)
+            ),
             owner_email=data.get("owner_email", ""),
             admin_emails=data.get("admin_emails", []),
             api_key_hash=data.get("api_key_hash", ""),
@@ -124,10 +131,51 @@ class Tenant:
     def with_plan(cls, plan: TenantPlan, **kwargs) -> "Tenant":
         """Create tenant with plan-default limits."""
         defaults = {
-            TenantPlan.FREE: dict(max_concurrent_tasks=1, max_daily_tasks=10, max_monthly_tasks=100, max_browser_workers=1, features={"credential_vault": False, "audit_log": False, "dlp": False, "scheduling": False, "recording": False, "governance": False}),
-            TenantPlan.STARTER: dict(max_concurrent_tasks=2, max_daily_tasks=50, max_monthly_tasks=1000, max_browser_workers=1),
-            TenantPlan.PROFESSIONAL: dict(max_concurrent_tasks=5, max_daily_tasks=500, max_monthly_tasks=10000, max_browser_workers=3, features={"credential_vault": True, "audit_log": True, "dlp": True, "scheduling": True, "recording": False, "governance": True}),
-            TenantPlan.ENTERPRISE: dict(max_concurrent_tasks=20, max_daily_tasks=5000, max_monthly_tasks=100000, max_browser_workers=10, features={"credential_vault": True, "audit_log": True, "dlp": True, "scheduling": True, "recording": True, "governance": True}),
+            TenantPlan.FREE: dict(
+                max_concurrent_tasks=1,
+                max_daily_tasks=10,
+                max_monthly_tasks=100,
+                max_browser_workers=1,
+                features={
+                    "credential_vault": False,
+                    "audit_log": False,
+                    "dlp": False,
+                    "scheduling": False,
+                    "recording": False,
+                    "governance": False,
+                },
+            ),
+            TenantPlan.STARTER: dict(
+                max_concurrent_tasks=2, max_daily_tasks=50, max_monthly_tasks=1000, max_browser_workers=1
+            ),
+            TenantPlan.PROFESSIONAL: dict(
+                max_concurrent_tasks=5,
+                max_daily_tasks=500,
+                max_monthly_tasks=10000,
+                max_browser_workers=3,
+                features={
+                    "credential_vault": True,
+                    "audit_log": True,
+                    "dlp": True,
+                    "scheduling": True,
+                    "recording": False,
+                    "governance": True,
+                },
+            ),
+            TenantPlan.ENTERPRISE: dict(
+                max_concurrent_tasks=20,
+                max_daily_tasks=5000,
+                max_monthly_tasks=100000,
+                max_browser_workers=10,
+                features={
+                    "credential_vault": True,
+                    "audit_log": True,
+                    "dlp": True,
+                    "scheduling": True,
+                    "recording": True,
+                    "governance": True,
+                },
+            ),
         }
         merged = {**defaults.get(plan, {}), **kwargs}
         return cls(plan=plan, **merged)
@@ -160,7 +208,13 @@ class TenantStore:
         conn = sqlite3.connect(self._path)
         conn.execute(
             "INSERT OR REPLACE INTO tenants VALUES (?,?,?,?,?)",
-            (tenant.tenant_id, json.dumps(tenant.to_dict()), tenant.status.value, tenant.plan.value, tenant.created_at.isoformat()),
+            (
+                tenant.tenant_id,
+                json.dumps(tenant.to_dict()),
+                tenant.status.value,
+                tenant.plan.value,
+                tenant.created_at.isoformat(),
+            ),
         )
         conn.commit()
         conn.close()
@@ -178,6 +232,7 @@ class TenantStore:
     async def load_by_api_key(self, api_key: str) -> Optional[Tenant]:
         """Find tenant by API key (simple hash comparison)."""
         import hashlib
+
         key_hash = hashlib.sha256(api_key.encode()).hexdigest()
         conn = sqlite3.connect(self._path)
         cursor = conn.execute("SELECT data FROM tenants")
@@ -213,8 +268,9 @@ class TenantManager:
     def __init__(self, store: Optional[TenantStore] = None):
         self._store = store or TenantStore()
 
-    async def create_tenant(self, name: str, plan: TenantPlan = TenantPlan.STARTER,
-                            owner_email: str = "", **kwargs) -> Tenant:
+    async def create_tenant(
+        self, name: str, plan: TenantPlan = TenantPlan.STARTER, owner_email: str = "", **kwargs
+    ) -> Tenant:
         tenant = Tenant.with_plan(plan, name=name, owner_email=owner_email, **kwargs)
         await self._store.save(tenant)
         return tenant
@@ -267,6 +323,7 @@ class TenantManager:
         if not tenant or tenant.status != TenantStatus.ACTIVE:
             return False
         import hashlib
+
         return tenant.api_key_hash == hashlib.sha256(api_key.encode()).hexdigest()
 
     async def set_api_key(self, tenant_id: str, api_key: str) -> bool:
@@ -274,6 +331,7 @@ class TenantManager:
         if not tenant:
             return False
         import hashlib
+
         tenant.api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
         tenant.updated_at = datetime.now(timezone.utc)
         await self._store.save(tenant)

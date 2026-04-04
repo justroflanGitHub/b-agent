@@ -6,15 +6,19 @@ Supports standard 5-field cron expressions plus:
 - Holiday calendar (via `holidays` package)
 """
 
-import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
-
 # Day-of-week mapping (cron: 0=Sunday, 7=Sunday)
 DOW_MAP = {
-    "sun": 0, "mon": 1, "tue": 2, "wed": 3, "thu": 4, "fri": 5, "sat": 6,
+    "sun": 0,
+    "mon": 1,
+    "tue": 2,
+    "wed": 3,
+    "thu": 4,
+    "fri": 5,
+    "sat": 6,
 }
 
 
@@ -29,10 +33,11 @@ class CronSchedule:
         "0 9 1 * *"          — 1st of every month at 9:00
         "30 17 * * FRI"      — Every Friday at 17:30
     """
+
     expression: str = "0 9 * * *"
     timezone: str = "UTC"
     business_hours_only: bool = False
-    business_hours: Optional[Tuple[int, int]] = None   # (start_hour, end_hour) e.g. (9, 17)
+    business_hours: Optional[Tuple[int, int]] = None  # (start_hour, end_hour) e.g. (9, 17)
     exclude_weekends: bool = False
     exclude_holidays: bool = False
     holiday_country: Optional[str] = None
@@ -66,10 +71,10 @@ class CronSchedule:
                             h = candidate.hour
                             if h < self.business_hours[0] or h >= self.business_hours[1]:
                                 # Jump to next business-hour slot
-                                candidate = candidate.replace(
-                                    hour=self.business_hours[0], minute=0
-                                ) + timedelta(days=1) if h >= self.business_hours[1] else candidate.replace(
-                                    hour=self.business_hours[0], minute=0
+                                candidate = (
+                                    candidate.replace(hour=self.business_hours[0], minute=0) + timedelta(days=1)
+                                    if h >= self.business_hours[1]
+                                    else candidate.replace(hour=self.business_hours[0], minute=0)
                                 )
                                 continue
                         if self.exclude_holidays and self._is_holiday(candidate):
@@ -116,6 +121,7 @@ class CronSchedule:
     def _get_tz(self):
         try:
             from zoneinfo import ZoneInfo
+
             return ZoneInfo(self.timezone)
         except (ImportError, KeyError):
             return timezone.utc
@@ -183,6 +189,7 @@ class CronSchedule:
             return False
         try:
             import holidays as hol
+
             country_holidays = hol.country_holidays(self.holiday_country)
             return dt.date() in country_holidays
         except ImportError:

@@ -31,6 +31,7 @@ class ApprovalStatus(Enum):
 @dataclass
 class ApprovalRequest:
     """An approval request."""
+
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     task_id: str = ""
     step_index: int = 0
@@ -99,6 +100,7 @@ class ApprovalStore:
 
     def _init_db(self):
         import sqlite3
+
         conn = sqlite3.connect(self._path)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS approval_requests (
@@ -128,18 +130,25 @@ class ApprovalStore:
 
     async def save(self, request: ApprovalRequest) -> str:
         import sqlite3
+
         conn = sqlite3.connect(self._path)
         conn.execute(
             """INSERT OR REPLACE INTO approval_requests VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
-                request.request_id, request.task_id, request.step_index,
-                request.rule_id, request.status.value,
-                request.requested_at.isoformat(), request.requested_by,
+                request.request_id,
+                request.task_id,
+                request.step_index,
+                request.rule_id,
+                request.status.value,
+                request.requested_at.isoformat(),
+                request.requested_by,
                 json.dumps(request.approvers),
                 request.expires_at.isoformat() if request.expires_at else None,
                 request.resolved_at.isoformat() if request.resolved_at else None,
-                request.resolved_by, request.resolution_note,
-                request.escalation_level, request.description,
+                request.resolved_by,
+                request.resolution_note,
+                request.escalation_level,
+                request.description,
                 json.dumps(request.context.to_dict()) if request.context else None,
                 request.checkpoint_id,
                 json.dumps(request.browser_state),
@@ -151,6 +160,7 @@ class ApprovalStore:
 
     async def load(self, request_id: str) -> Optional[ApprovalRequest]:
         import sqlite3
+
         conn = sqlite3.connect(self._path)
         cursor = conn.execute("SELECT * FROM approval_requests WHERE request_id=?", (request_id,))
         row = cursor.fetchone()
@@ -165,6 +175,7 @@ class ApprovalStore:
 
     async def list_by_status(self, status: ApprovalStatus) -> List[ApprovalRequest]:
         import sqlite3
+
         conn = sqlite3.connect(self._path)
         cursor = conn.execute("SELECT * FROM approval_requests WHERE status=?", (status.value,))
         rows = cursor.fetchall()
@@ -173,6 +184,7 @@ class ApprovalStore:
 
     async def list_pending(self, approver: Optional[str] = None) -> List[ApprovalRequest]:
         import sqlite3
+
         conn = sqlite3.connect(self._path)
         if approver:
             cursor = conn.execute(
@@ -190,14 +202,18 @@ class ApprovalStore:
         context = PolicyContext(**ctx_data) if ctx_data else None
 
         req = ApprovalRequest(
-            request_id=row[0], task_id=row[1] or "", step_index=row[2] or 0,
-            rule_id=row[3] or "", status=ApprovalStatus(row[4]),
+            request_id=row[0],
+            task_id=row[1] or "",
+            step_index=row[2] or 0,
+            rule_id=row[3] or "",
+            status=ApprovalStatus(row[4]),
             requested_at=datetime.fromisoformat(row[5]),
             requested_by=row[6] or "system",
             approvers=json.loads(row[7]),
             expires_at=datetime.fromisoformat(row[8]) if row[8] else None,
             resolved_at=datetime.fromisoformat(row[9]) if row[9] else None,
-            resolved_by=row[10], resolution_note=row[11],
+            resolved_by=row[10],
+            resolution_note=row[11],
             escalation_level=row[12] or 0,
             description=row[13] or "",
             context=context,
@@ -217,7 +233,7 @@ class ApprovalManager:
     - Timeout with auto-deny
     """
 
-    def __init__(self, store: Optional[ApprovalStore] = None, notifiers: Optional[List['Notifier']] = None):
+    def __init__(self, store: Optional[ApprovalStore] = None, notifiers: Optional[List["Notifier"]] = None):
         self._store = store or ApprovalStore()
         self._notifiers = notifiers or []
         self._pending_events: Dict[str, asyncio.Event] = {}
@@ -260,7 +276,9 @@ class ApprovalManager:
 
         logger.info(
             "Approval requested: %s for task=%s (approvers=%s)",
-            request.request_id, context.task_id, config.approvers,
+            request.request_id,
+            context.task_id,
+            config.approvers,
         )
         return request
 
@@ -344,11 +362,7 @@ class ApprovalManager:
 
         for req in pending:
             if req.is_expired():
-                auto_deny = (
-                    req.approval_config.auto_deny_on_timeout
-                    if req.approval_config
-                    else True
-                )
+                auto_deny = req.approval_config.auto_deny_on_timeout if req.approval_config else True
                 if auto_deny:
                     req.status = ApprovalStatus.EXPIRED
                     req.resolved_at = datetime.now(timezone.utc)

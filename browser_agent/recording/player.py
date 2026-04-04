@@ -1,33 +1,32 @@
 """Workflow player — replay recorded workflows with multiple strategies."""
 
-import asyncio
 import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
-from .recorder import Recording, RecordedAction, RecordingParameter
+from .recorder import Recording, RecordedAction
 from .adaptive_replay import AdaptiveReplay
 
 logger = logging.getLogger(__name__)
 
 
 class ReplayMode(Enum):
-    STRICT = "strict"               # Exact replay, fail on mismatch
-    ADAPTIVE = "adaptive"           # Try exact, fall back to vision
-    VISION_ONLY = "vision_only"     # Use vision model every step
+    STRICT = "strict"  # Exact replay, fail on mismatch
+    ADAPTIVE = "adaptive"  # Try exact, fall back to vision
+    VISION_ONLY = "vision_only"  # Use vision model every step
 
 
 @dataclass
 class ReplayStepResult:
     """Result of replaying a single step."""
+
     step_index: int = 0
     action_type: str = ""
     success: bool = False
-    strategy_used: str = "exact"    # "exact", "selector", "text", "vision", "position"
+    strategy_used: str = "exact"  # "exact", "selector", "text", "vision", "position"
     page_matched: bool = True
     error: Optional[str] = None
     execution_time: float = 0.0
@@ -48,6 +47,7 @@ class ReplayStepResult:
 @dataclass
 class ReplayResult:
     """Result of replaying an entire workflow."""
+
     recording_id: str = ""
     success: bool = False
     total_steps: int = 0
@@ -162,16 +162,16 @@ class WorkflowPlayer:
                     break
 
         result.execution_time = time.monotonic() - start
-        result.success = (
-            result.completed_steps == result.total_steps
-            and all(s.success for s in result.step_results)
-        )
+        result.success = result.completed_steps == result.total_steps and all(s.success for s in result.step_results)
 
         logger.info(
             "Replay %s: %s (%d/%d steps, %.1fs, %d fallbacks)",
-            recording.recording_id[:8], "OK" if result.success else "FAIL",
-            result.completed_steps, result.total_steps,
-            result.execution_time, result.adaptive_fallbacks,
+            recording.recording_id[:8],
+            "OK" if result.success else "FAIL",
+            result.completed_steps,
+            result.total_steps,
+            result.execution_time,
+            result.adaptive_fallbacks,
         )
         return result
 

@@ -17,7 +17,7 @@ from .diff import VisualDiff
 __all__ = [
     "VisualAnalyzer",
     "BoundingBox",
-    "ElementInfo", 
+    "ElementInfo",
     "PageState",
     "VisionCache",
     "VisualDiff",

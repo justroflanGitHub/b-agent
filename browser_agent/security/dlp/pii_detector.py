@@ -5,7 +5,7 @@ API keys, passwords, and more. Supports custom patterns.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -31,6 +31,7 @@ class PIIType(Enum):
 @dataclass
 class PIIMatch:
     """A single PII detection match."""
+
     pii_type: PIIType
     value: str
     start: int
@@ -51,6 +52,7 @@ class PIIMatch:
 
 def _hash_value(value: str) -> str:
     import hashlib
+
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
 
 
@@ -72,44 +74,44 @@ def _luhn_check(number: str) -> bool:
 
 BUILTIN_PATTERNS: Dict[PIIType, List[re.Pattern]] = {
     PIIType.SSN: [
-        re.compile(r'\b(?!000|666|9\d{2})\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b'),
-        re.compile(r'\b(?!000|666|9\d{2})\d{3}\s(?!00)\d{2}\s(?!0000)\d{4}\b'),
+        re.compile(r"\b(?!000|666|9\d{2})\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b"),
+        re.compile(r"\b(?!000|666|9\d{2})\d{3}\s(?!00)\d{2}\s(?!0000)\d{4}\b"),
     ],
     PIIType.CREDIT_CARD: [
-        re.compile(r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b'),
-        re.compile(r'\b\d{4}[\s-]?\d{6}[\s-]?\d{5}\b'),
+        re.compile(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"),
+        re.compile(r"\b\d{4}[\s-]?\d{6}[\s-]?\d{5}\b"),
     ],
     PIIType.EMAIL: [
-        re.compile(r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b'),
+        re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b"),
     ],
     PIIType.PHONE: [
-        re.compile(r'\b\+?1?\s*\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b'),
-        re.compile(r'\b\+\d{1,3}\s\d{2,4}\s\d{3,4}\s\d{3,4}\b'),
+        re.compile(r"\b\+?1?\s*\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b"),
+        re.compile(r"\b\+\d{1,3}\s\d{2,4}\s\d{3,4}\s\d{3,4}\b"),
     ],
     PIIType.DATE_OF_BIRTH: [
-        re.compile(r'\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b'),
+        re.compile(r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"),
     ],
     PIIType.IP_ADDRESS: [
-        re.compile(r'\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b'),
+        re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"),
     ],
     PIIType.API_KEY: [
         re.compile(r'(?i)(?:api[_-]?key|secret|token|password)\s*[:=]\s*["\']?[\w\-]{16,}["\']?'),
-        re.compile(r'\bsk-[a-zA-Z0-9]{32,}\b'),
-        re.compile(r'\bAKIA[0-9A-Z]{16}\b'),
-        re.compile(r'\bghp_[a-zA-Z0-9]{36}\b'),
-        re.compile(r'\bglpat-[a-zA-Z0-9\-]{20,}\b'),
+        re.compile(r"\bsk-[a-zA-Z0-9]{32,}\b"),
+        re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+        re.compile(r"\bghp_[a-zA-Z0-9]{36}\b"),
+        re.compile(r"\bglpat-[a-zA-Z0-9\-]{20,}\b"),
     ],
     PIIType.PASSWORD: [
-        re.compile(r'(?i)(?:password|passwd|pwd)\s*[:=]\s*\S+'),
+        re.compile(r"(?i)(?:password|passwd|pwd)\s*[:=]\s*\S+"),
     ],
     PIIType.BANK_ACCOUNT: [
-        re.compile(r'\b\d{8,17}\b'),
+        re.compile(r"\b\d{8,17}\b"),
     ],
     PIIType.MEDICAL_RECORD: [
-        re.compile(r'(?i)(?:mrn|medical[_-]?record|patient[_-]?id)\s*[:=]\s*[\w\-]{4,}'),
+        re.compile(r"(?i)(?:mrn|medical[_-]?record|patient[_-]?id)\s*[:=]\s*[\w\-]{4,}"),
     ],
     PIIType.NAME: [
-        re.compile(r'(?i)(?:full[_\s]?name|patient[_\s]?name)\s*[:=]\s*[A-Z][a-z]+\s+[A-Z][a-z]+'),
+        re.compile(r"(?i)(?:full[_\s]?name|patient[_\s]?name)\s*[:=]\s*[A-Z][a-z]+\s+[A-Z][a-z]+"),
     ],
 }
 
@@ -147,7 +149,7 @@ class PIIDetector:
 
                     # Extra validation
                     if pii_type == PIIType.CREDIT_CARD:
-                        digits_only = re.sub(r'[\s-]', '', value)
+                        digits_only = re.sub(r"[\s-]", "", value)
                         if not _luhn_check(digits_only):
                             continue
                         confidence = 0.95
@@ -160,14 +162,16 @@ class PIIDetector:
                     else:
                         confidence = 0.7
 
-                    matches.append(PIIMatch(
-                        pii_type=pii_type,
-                        value=value,
-                        start=m.start(),
-                        end=m.end(),
-                        confidence=confidence,
-                        masked=_mask_value(value),
-                    ))
+                    matches.append(
+                        PIIMatch(
+                            pii_type=pii_type,
+                            value=value,
+                            start=m.start(),
+                            end=m.end(),
+                            confidence=confidence,
+                            masked=_mask_value(value),
+                        )
+                    )
 
         # Sort by position
         matches.sort(key=lambda m: m.start)

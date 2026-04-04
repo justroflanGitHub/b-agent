@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ElementMatch:
     """Result of finding an element on a changed page."""
+
     found: bool = False
-    strategy: str = "none"     # "selector", "text", "vision", "position", "description"
+    strategy: str = "none"  # "selector", "text", "vision", "position", "description"
     coordinates: Optional[Tuple[int, int]] = None
     selector: Optional[str] = None
     confidence: float = 0.0
@@ -25,6 +26,7 @@ class ElementMatch:
 @dataclass
 class PageMatchResult:
     """Result of comparing current page to recorded state."""
+
     matches: bool = False
     similarity: float = 0.0
     changed_regions: list = field(default_factory=list)

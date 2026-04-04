@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ class WorkerStatus(Enum):
 @dataclass
 class BrowserWorker:
     """A browser instance available for task execution."""
+
     worker_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     browser_type: str = "chromium"
     status: WorkerStatus = WorkerStatus.IDLE
@@ -174,7 +175,10 @@ class ResourcePool:
             for wid, w in self._workers.items():
                 if w.is_available:
                     age = (now - w.last_activity).total_seconds()
-                    if age > self._config.idle_timeout and len(self._workers) - len(to_remove) > self._config.min_workers:
+                    if (
+                        age > self._config.idle_timeout
+                        and len(self._workers) - len(to_remove) > self._config.min_workers
+                    ):
                         to_remove.append(wid)
             for wid in to_remove:
                 del self._workers[wid]
@@ -190,8 +194,9 @@ class ResourcePool:
         return len(self._workers)
 
     def _tenant_count(self, tenant_id: str) -> int:
-        return sum(1 for w in self._workers.values()
-                   if w.current_tenant_id == tenant_id and w.status == WorkerStatus.BUSY)
+        return sum(
+            1 for w in self._workers.values() if w.current_tenant_id == tenant_id and w.status == WorkerStatus.BUSY
+        )
 
     def get_stats(self) -> dict:
         return {

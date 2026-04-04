@@ -8,12 +8,13 @@ breaks the chain signature.
 import hashlib
 import hmac
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 
 @dataclass
 class TamperedEvent:
     """Details of a tampered event in the chain."""
+
     event_id: str
     expected_hash: str
     actual_hash: str
@@ -23,6 +24,7 @@ class TamperedEvent:
 @dataclass
 class MissingEvent:
     """A gap in the chain."""
+
     after_event_id: str
     expected_hash: str
     got_hash: str
@@ -31,6 +33,7 @@ class MissingEvent:
 @dataclass
 class ChainVerificationResult:
     """Result of verifying the entire audit chain."""
+
     total_events: int
     verified_events: int = 0
     tampered_events: List[TamperedEvent] = field(default_factory=list)
@@ -66,9 +69,7 @@ class AuditChain:
 
         # Sign: HMAC of (event_hash + previous_hash)
         msg = f"{event.event_hash}:{event.previous_hash}".encode("utf-8")
-        event.chain_signature = hmac.new(
-            self._signing_key, msg, hashlib.sha256
-        ).hexdigest()
+        event.chain_signature = hmac.new(self._signing_key, msg, hashlib.sha256).hexdigest()
 
         return event
 
@@ -85,6 +86,7 @@ class AuditChain:
             events: List of AuditEvent objects, sorted by timestamp.
         """
         import time
+
         start = time.monotonic()
 
         result = ChainVerificationResult(total_events=len(events))
@@ -94,49 +96,55 @@ class AuditChain:
             # Check hash
             expected_hash = event.compute_hash()
             if event.event_hash != expected_hash:
-                result.tampered_events.append(TamperedEvent(
-                    event_id=event.event_id,
-                    expected_hash=expected_hash,
-                    actual_hash=event.event_hash,
-                    issue="hash_mismatch",
-                ))
+                result.tampered_events.append(
+                    TamperedEvent(
+                        event_id=event.event_id,
+                        expected_hash=expected_hash,
+                        actual_hash=event.event_hash,
+                        issue="hash_mismatch",
+                    )
+                )
                 result.is_valid = False
                 continue
 
             # Check chain linkage
             if i == 0:
                 if event.previous_hash != "GENESIS":
-                    result.tampered_events.append(TamperedEvent(
-                        event_id=event.event_id,
-                        expected_hash="GENESIS",
-                        actual_hash=event.previous_hash,
-                        issue="chain_broken",
-                    ))
+                    result.tampered_events.append(
+                        TamperedEvent(
+                            event_id=event.event_id,
+                            expected_hash="GENESIS",
+                            actual_hash=event.previous_hash,
+                            issue="chain_broken",
+                        )
+                    )
                     result.is_valid = False
                     continue
             else:
                 prev = events[i - 1]
                 if event.previous_hash != prev.event_hash:
-                    result.missing_events.append(MissingEvent(
-                        after_event_id=prev.event_id,
-                        expected_hash=prev.event_hash,
-                        got_hash=event.previous_hash,
-                    ))
+                    result.missing_events.append(
+                        MissingEvent(
+                            after_event_id=prev.event_id,
+                            expected_hash=prev.event_hash,
+                            got_hash=event.previous_hash,
+                        )
+                    )
                     result.is_valid = False
                     continue
 
             # Check signature
             msg = f"{event.event_hash}:{event.previous_hash}".encode("utf-8")
-            expected_sig = hmac.new(
-                self._signing_key, msg, hashlib.sha256
-            ).hexdigest()
+            expected_sig = hmac.new(self._signing_key, msg, hashlib.sha256).hexdigest()
             if event.chain_signature != expected_sig:
-                result.tampered_events.append(TamperedEvent(
-                    event_id=event.event_id,
-                    expected_hash=expected_sig,
-                    actual_hash=event.chain_signature,
-                    issue="signature_invalid",
-                ))
+                result.tampered_events.append(
+                    TamperedEvent(
+                        event_id=event.event_id,
+                        expected_hash=expected_sig,
+                        actual_hash=event.chain_signature,
+                        issue="signature_invalid",
+                    )
+                )
                 result.is_valid = False
                 continue
 
@@ -178,6 +186,7 @@ class AuditChain:
 @dataclass
 class ChainSeal:
     """Periodic seal over a batch of events."""
+
     seal_id: str = ""
     merkle_root: str = ""
     event_count: int = 0
@@ -189,9 +198,11 @@ class ChainSeal:
     def __post_init__(self):
         if not self.seal_id:
             import uuid
+
             self.seal_id = str(uuid.uuid4())
         if self.created_at is None:
             from datetime import datetime, timezone
+
             self.created_at = datetime.now(timezone.utc)
 
     def verify(self, signing_key: bytes, events: list) -> bool:

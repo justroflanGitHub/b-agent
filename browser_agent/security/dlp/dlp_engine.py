@@ -8,26 +8,26 @@ import hashlib
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from .pii_detector import PIIDetector, PIIType, PIIMatch
-from .redaction import DataRedactor, RedactionStrategy, TokenMap
+from .redaction import DataRedactor, RedactionStrategy
 
 logger = logging.getLogger(__name__)
 
 
 class DLPAction(Enum):
-    REDACT = "redact"        # Redact and continue
-    BLOCK = "block"          # Block the action
-    ALERT = "alert"          # Alert but continue
-    LOG = "log"              # Log only
+    REDACT = "redact"  # Redact and continue
+    BLOCK = "block"  # Block the action
+    ALERT = "alert"  # Alert but continue
+    LOG = "log"  # Log only
 
 
 @dataclass
 class DLPPolicy:
     """DLP policy configuration."""
+
     action: DLPAction = DLPAction.REDACT
     pii_types: List[PIIType] = field(default_factory=list)  # Empty = all types
     redaction_strategy: RedactionStrategy = RedactionStrategy.MASK
@@ -44,6 +44,7 @@ class DLPPolicy:
 @dataclass
 class DLPViolation:
     """Record of a PII detection event."""
+
     pii_type: PIIType
     field_name: Optional[str]
     confidence: float
@@ -65,6 +66,7 @@ class DLPViolation:
 @dataclass
 class DLPResult:
     """Result of a DLP scan."""
+
     has_violations: bool
     action_taken: DLPAction
     violations: List[DLPViolation] = field(default_factory=list)
@@ -150,7 +152,9 @@ class DLPEngine:
         if self._policy.log_on_detection:
             logger.warning(
                 "DLP: %d violation(s) in %s, action=%s types=%s",
-                len(violations), context, action.value,
+                len(violations),
+                context,
+                action.value,
                 [v.pii_type.value for v in violations],
             )
 

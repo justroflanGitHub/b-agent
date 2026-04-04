@@ -15,5 +15,5 @@ __all__ = [
     "MetricsCollector",
     "metrics",
     "HealthChecker",
-    "HealthStatus"
+    "HealthStatus",
 ]

@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class TaskStatusEnum(str, Enum):
     """Task status enumeration."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -21,6 +22,7 @@ class TaskStatusEnum(str, Enum):
 
 class SkillEnum(str, Enum):
     """Available skills enumeration."""
+
     FORM_FILLING = "form_filling"
     DATA_EXTRACTION = "data_extraction"
     WEB_SCRAPING = "web_scraping"
@@ -29,6 +31,7 @@ class SkillEnum(str, Enum):
 
 class TaskRequest(BaseModel):
     """Request model for creating a browser automation task."""
+
     goal: str = Field(..., description="Natural language goal for the task")
     start_url: Optional[str] = Field(None, description="Starting URL for the task")
     max_steps: int = Field(15, ge=1, le=100, description="Maximum number of steps")
@@ -46,13 +49,14 @@ class TaskRequest(BaseModel):
                 "skill": "form_filling",
                 "config": {"timeout": 300},
                 "priority": 5,
-                "callback_url": None
+                "callback_url": None,
             }
         }
 
 
 class TaskStatus(BaseModel):
     """Response model for task status."""
+
     task_id: str = Field(..., description="Unique task identifier")
     status: TaskStatusEnum = Field(..., description="Current task status")
     goal: str = Field(..., description="Task goal")
@@ -78,13 +82,14 @@ class TaskStatus(BaseModel):
                 "updated_at": "2024-01-15T10:32:00Z",
                 "started_at": "2024-01-15T10:30:05Z",
                 "completed_at": None,
-                "error": None
+                "error": None,
             }
         }
 
 
 class ActionResult(BaseModel):
     """Model for a single action result."""
+
     step: int = Field(..., description="Step number")
     action: str = Field(..., description="Action type")
     target: Optional[str] = Field(None, description="Target element description")
@@ -96,6 +101,7 @@ class ActionResult(BaseModel):
 
 class TaskResult(BaseModel):
     """Response model for completed task result."""
+
     task_id: str = Field(..., description="Unique task identifier")
     status: TaskStatusEnum = Field(..., description="Final task status")
     goal: str = Field(..., description="Task goal")
@@ -123,7 +129,7 @@ class TaskResult(BaseModel):
                         "success": True,
                         "message": "Clicked on name field",
                         "timestamp": "2024-01-15T10:30:10Z",
-                        "screenshot": None
+                        "screenshot": None,
                     }
                 ],
                 "extracted_data": None,
@@ -131,13 +137,14 @@ class TaskResult(BaseModel):
                 "execution_time": 45.2,
                 "created_at": "2024-01-15T10:30:00Z",
                 "completed_at": "2024-01-15T10:30:45Z",
-                "error": None
+                "error": None,
             }
         }
 
 
 class SessionInfo(BaseModel):
     """Model for browser session information."""
+
     session_id: str = Field(..., description="Session identifier")
     created_at: datetime = Field(..., description="Session creation time")
     last_activity: datetime = Field(..., description="Last activity time")
@@ -149,6 +156,7 @@ class SessionInfo(BaseModel):
 
 class HealthStatus(BaseModel):
     """Model for health check response."""
+
     status: str = Field(..., description="Overall health status")
     version: str = Field(..., description="API version")
     uptime: float = Field(..., description="Uptime in seconds")
@@ -170,24 +178,21 @@ class HealthStatus(BaseModel):
                 "active_tasks": 2,
                 "queued_tasks": 5,
                 "memory_usage": 256.5,
-                "components": {
-                    "browser": True,
-                    "llm": True,
-                    "vision": True,
-                    "resilience": True
-                }
+                "components": {"browser": True, "llm": True, "vision": True, "resilience": True},
             }
         }
 
 
 class MetricPoint(BaseModel):
     """Model for a single metric data point."""
+
     timestamp: datetime = Field(..., description="Metric timestamp")
     value: float = Field(..., description="Metric value")
 
 
 class MetricsResponse(BaseModel):
     """Response model for metrics."""
+
     task_duration: List[MetricPoint] = Field(default_factory=list, description="Task duration metrics")
     success_rate: List[MetricPoint] = Field(default_factory=list, description="Success rate metrics")
     error_types: Dict[str, int] = Field(default_factory=dict, description="Error type counts")
@@ -199,31 +204,20 @@ class MetricsResponse(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "task_duration": [
-                    {"timestamp": "2024-01-15T10:30:00Z", "value": 45.2}
-                ],
-                "success_rate": [
-                    {"timestamp": "2024-01-15T10:30:00Z", "value": 0.95}
-                ],
-                "error_types": {
-                    "timeout": 5,
-                    "element_not_found": 3,
-                    "navigation_error": 2
-                },
-                "action_latency": {
-                    "click": 0.5,
-                    "type": 0.3,
-                    "scroll": 0.2
-                },
+                "task_duration": [{"timestamp": "2024-01-15T10:30:00Z", "value": 45.2}],
+                "success_rate": [{"timestamp": "2024-01-15T10:30:00Z", "value": 0.95}],
+                "error_types": {"timeout": 5, "element_not_found": 3, "navigation_error": 2},
+                "action_latency": {"click": 0.5, "type": 0.3, "scroll": 0.2},
                 "tasks_completed": 100,
                 "tasks_failed": 5,
-                "average_duration": 42.5
+                "average_duration": 42.5,
             }
         }
 
 
 class ErrorResponse(BaseModel):
     """Error response model."""
+
     error: str = Field(..., description="Error type")
     message: str = Field(..., description="Error message")
     detail: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
@@ -235,19 +229,21 @@ class ErrorResponse(BaseModel):
                 "error": "TaskNotFoundError",
                 "message": "Task with ID task_abc123 not found",
                 "detail": {"task_id": "task_abc123"},
-                "timestamp": "2024-01-15T10:30:00Z"
+                "timestamp": "2024-01-15T10:30:00Z",
             }
         }
 
 
 class SkillListResponse(BaseModel):
     """Response model for listing available skills."""
+
     skills: List[Dict[str, Any]] = Field(..., description="List of available skills")
     count: int = Field(..., description="Total number of skills")
 
 
 class CancelResponse(BaseModel):
     """Response model for task cancellation."""
+
     task_id: str = Field(..., description="Cancelled task ID")
     status: TaskStatusEnum = Field(..., description="New task status")
     message: str = Field(..., description="Cancellation message")

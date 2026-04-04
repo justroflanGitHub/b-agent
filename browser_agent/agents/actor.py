@@ -10,7 +10,7 @@ The Actor Agent is responsible for:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 from datetime import datetime
 import asyncio
 import uuid
@@ -25,6 +25,7 @@ from .base import (
 
 class ActionType(Enum):
     """Types of actions the actor can perform."""
+
     CLICK = "click"
     DOUBLE_CLICK = "double_click"
     RIGHT_CLICK = "right_click"
@@ -49,6 +50,7 @@ class ActionType(Enum):
 @dataclass
 class ActionRequest:
     """Request to perform an action."""
+
     action_type: ActionType
     selector: Optional[str] = None
     coordinates: Optional[Dict[str, float]] = None  # x, y
@@ -64,7 +66,7 @@ class ActionRequest:
     retry_count: int = 2
     retry_delay: float = 1.0
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -89,6 +91,7 @@ class ActionRequest:
 @dataclass
 class ActionResult:
     """Result of an action execution."""
+
     action_id: str
     action_type: ActionType
     success: bool
@@ -100,7 +103,7 @@ class ActionResult:
     retries: int = 0
     metadata: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -119,7 +122,7 @@ class ActionResult:
 class ActorAgent(BaseAgent):
     """
     Agent responsible for executing browser actions.
-    
+
     Capabilities:
     - Click, type, scroll, navigate
     - Form interactions
@@ -127,7 +130,7 @@ class ActorAgent(BaseAgent):
     - Waiting and synchronization
     - Screenshot capture
     """
-    
+
     def __init__(
         self,
         config: Optional[AgentConfig] = None,
@@ -146,15 +149,15 @@ class ActorAgent(BaseAgent):
         super().__init__(config)
         self._browser = browser
         self._action_executor = action_executor
-    
+
     def set_browser(self, browser: Any) -> None:
         """Set the browser instance."""
         self._browser = browser
-    
+
     def set_action_executor(self, executor: Any) -> None:
         """Set the action executor."""
         self._action_executor = executor
-    
+
     async def execute(self, task: Any) -> AgentResult:
         """Execute an action task."""
         if isinstance(task, ActionRequest):
@@ -193,7 +196,7 @@ class ActorAgent(BaseAgent):
                 task_id="unknown",
                 error=f"Unknown task type: {type(task)}",
             )
-    
+
     def _parse_action_request(self, data: Dict[str, Any]) -> ActionRequest:
         """Parse a dictionary into an ActionRequest."""
         action_type = ActionType(data.get("action_type", "click"))
@@ -214,16 +217,16 @@ class ActorAgent(BaseAgent):
             retry_delay=data.get("retry_delay", 1.0),
             metadata=data.get("metadata", {}),
         )
-    
+
     async def perform_action(self, request: ActionRequest) -> ActionResult:
         """Perform an action with retries."""
         action_id = str(uuid.uuid4())
         start_time = datetime.now()
-        
+
         # Wait before action
         if request.wait_before > 0:
             await asyncio.sleep(request.wait_before)
-        
+
         # Take screenshot before if browser available
         screenshot_before = None
         if self._browser:
@@ -231,17 +234,17 @@ class ActorAgent(BaseAgent):
                 screenshot_before = await self._take_screenshot()
             except Exception:
                 pass
-        
+
         # Execute with retries
         last_error = None
         for attempt in range(request.retry_count + 1):
             try:
                 result_data = await self._execute_action(request)
-                
+
                 # Wait after action
                 if request.wait_after > 0:
                     await asyncio.sleep(request.wait_after)
-                
+
                 # Take screenshot after
                 screenshot_after = None
                 if self._browser:
@@ -249,9 +252,9 @@ class ActorAgent(BaseAgent):
                         screenshot_after = await self._take_screenshot()
                     except Exception:
                         pass
-                
+
                 duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-                
+
                 return ActionResult(
                     action_id=action_id,
                     action_type=request.action_type,
@@ -262,15 +265,15 @@ class ActorAgent(BaseAgent):
                     duration_ms=duration_ms,
                     retries=attempt,
                 )
-                
+
             except Exception as e:
                 last_error = str(e)
                 if attempt < request.retry_count:
                     await asyncio.sleep(request.retry_delay)
-        
+
         # All retries failed
         duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-        
+
         return ActionResult(
             action_id=action_id,
             action_type=request.action_type,
@@ -280,7 +283,7 @@ class ActorAgent(BaseAgent):
             duration_ms=duration_ms,
             retries=request.retry_count,
         )
-    
+
     async def _execute_action(self, request: ActionRequest) -> Any:
         """Execute a single action."""
         # Use action executor if available
@@ -289,17 +292,17 @@ class ActorAgent(BaseAgent):
                 request.action_type.value,
                 **self._get_action_params(request),
             )
-        
+
         # Fall back to direct browser control
         if not self._browser:
             raise RuntimeError("No browser or action executor available")
-        
+
         page = self._browser.get_current_page()
         if not page:
             raise RuntimeError("No active page available")
-        
+
         action_type = request.action_type
-        
+
         if action_type == ActionType.CLICK:
             return await self._do_click(page, request)
         elif action_type == ActionType.DOUBLE_CLICK:
@@ -338,7 +341,7 @@ class ActorAgent(BaseAgent):
             return await self._do_extract(page, request)
         else:
             raise ValueError(f"Unknown action type: {action_type}")
-    
+
     def _get_action_params(self, request: ActionRequest) -> Dict[str, Any]:
         """Get action parameters from request."""
         params = {}
@@ -360,7 +363,7 @@ class ActorAgent(BaseAgent):
         if request.amount:
             params["amount"] = request.amount
         return params
-    
+
     async def _do_click(self, page: Any, request: ActionRequest) -> bool:
         """Perform click action."""
         if request.coordinates:
@@ -377,7 +380,7 @@ class ActorAgent(BaseAgent):
         else:
             raise ValueError("Click requires either selector or coordinates")
         return True
-    
+
     async def _do_double_click(self, page: Any, request: ActionRequest) -> bool:
         """Perform double click action."""
         if request.coordinates:
@@ -394,7 +397,7 @@ class ActorAgent(BaseAgent):
         else:
             raise ValueError("Double click requires either selector or coordinates")
         return True
-    
+
     async def _do_right_click(self, page: Any, request: ActionRequest) -> bool:
         """Perform right click action."""
         if request.coordinates:
@@ -412,7 +415,7 @@ class ActorAgent(BaseAgent):
         else:
             raise ValueError("Right click requires either selector or coordinates")
         return True
-    
+
     async def _do_hover(self, page: Any, request: ActionRequest) -> bool:
         """Perform hover action."""
         if request.coordinates:
@@ -429,12 +432,12 @@ class ActorAgent(BaseAgent):
         else:
             raise ValueError("Hover requires either selector or coordinates")
         return True
-    
+
     async def _do_type(self, page: Any, request: ActionRequest) -> bool:
         """Perform type action."""
         if not request.text:
             raise ValueError("Type action requires text")
-        
+
         if request.selector:
             element = await page.wait_for_selector(
                 request.selector,
@@ -452,19 +455,19 @@ class ActorAgent(BaseAgent):
             # Just type into focused element
             await page.keyboard.type(request.text)
         return True
-    
+
     async def _do_press_key(self, page: Any, request: ActionRequest) -> bool:
         """Press a key."""
         if not request.keys:
             raise ValueError("Press key action requires keys")
         await page.keyboard.press(request.keys)
         return True
-    
+
     async def _do_scroll(self, page: Any, request: ActionRequest) -> bool:
         """Perform scroll action."""
         direction = request.direction or "down"
         amount = request.amount or 300
-        
+
         if direction == "down":
             await page.mouse.wheel(0, amount)
         elif direction == "up":
@@ -481,16 +484,16 @@ class ActorAgent(BaseAgent):
                     timeout=request.timeout * 1000,
                 )
                 await element.scroll_into_view_if_needed()
-        
+
         return True
-    
+
     async def _do_navigate(self, page: Any, request: ActionRequest) -> bool:
         """Navigate to URL."""
         if not request.url:
             raise ValueError("Navigate action requires URL")
         await page.goto(request.url, timeout=request.timeout * 1000)
         return True
-    
+
     async def _do_wait(self, page: Any, request: ActionRequest) -> bool:
         """Wait for condition."""
         if request.selector:
@@ -501,24 +504,24 @@ class ActorAgent(BaseAgent):
         else:
             await asyncio.sleep(request.timeout)
         return True
-    
+
     async def _do_select(self, page: Any, request: ActionRequest) -> bool:
         """Select option from dropdown."""
         if not request.selector or not request.value:
             raise ValueError("Select requires selector and value")
-        
+
         element = await page.wait_for_selector(
             request.selector,
             timeout=request.timeout * 1000,
         )
         await element.select_option(value=request.value)
         return True
-    
+
     async def _do_check(self, page: Any, request: ActionRequest, checked: bool) -> bool:
         """Check or uncheck a checkbox."""
         if not request.selector:
             raise ValueError("Check/Uncheck requires selector")
-        
+
         element = await page.wait_for_selector(
             request.selector,
             timeout=request.timeout * 1000,
@@ -528,19 +531,19 @@ class ActorAgent(BaseAgent):
         else:
             await element.uncheck()
         return True
-    
+
     async def _do_drag(self, page: Any, request: ActionRequest) -> bool:
         """Perform drag action."""
         if not request.selector:
             raise ValueError("Drag requires selector")
-        
+
         # For drag, we need source and target
         # This is a simplified implementation
         element = await page.wait_for_selector(
             request.selector,
             timeout=request.timeout * 1000,
         )
-        
+
         if request.coordinates:
             box = await element.bounding_box()
             if box:
@@ -554,7 +557,7 @@ class ActorAgent(BaseAgent):
                 )
                 await page.mouse.up()
         return True
-    
+
     async def _take_screenshot(self) -> bytes:
         """Take a screenshot."""
         if self._browser:
@@ -562,11 +565,11 @@ class ActorAgent(BaseAgent):
             if page:
                 return await page.screenshot()
         raise RuntimeError("Cannot take screenshot without browser")
-    
+
     async def _do_extract(self, page: Any, request: ActionRequest) -> Dict[str, Any]:
         """Extract data from page."""
         result = {}
-        
+
         if request.selector:
             element = await page.query_selector(request.selector)
             if element:
@@ -577,11 +580,11 @@ class ActorAgent(BaseAgent):
             result["html"] = await page.content()
             result["url"] = page.url
             result["title"] = await page.title()
-        
+
         return result
-    
+
     # Convenience methods
-    
+
     async def click(self, selector: str, **kwargs) -> ActionResult:
         """Click an element."""
         request = ActionRequest(
@@ -590,7 +593,7 @@ class ActorAgent(BaseAgent):
             **kwargs,
         )
         return await self.perform_action(request)
-    
+
     async def type_text(self, selector: str, text: str, **kwargs) -> ActionResult:
         """Type text into an element."""
         request = ActionRequest(
@@ -600,7 +603,7 @@ class ActorAgent(BaseAgent):
             **kwargs,
         )
         return await self.perform_action(request)
-    
+
     async def navigate(self, url: str, **kwargs) -> ActionResult:
         """Navigate to a URL."""
         request = ActionRequest(
@@ -609,7 +612,7 @@ class ActorAgent(BaseAgent):
             **kwargs,
         )
         return await self.perform_action(request)
-    
+
     async def scroll(self, direction: str = "down", amount: int = 300, **kwargs) -> ActionResult:
         """Scroll the page."""
         request = ActionRequest(
@@ -619,7 +622,7 @@ class ActorAgent(BaseAgent):
             **kwargs,
         )
         return await self.perform_action(request)
-    
+
     async def wait_for_element(self, selector: str, timeout: float = 30.0, **kwargs) -> ActionResult:
         """Wait for an element to appear."""
         request = ActionRequest(

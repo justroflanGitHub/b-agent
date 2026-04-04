@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import sqlite3
-import uuid
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
@@ -58,8 +57,10 @@ class ScheduleStore:
         conn.execute(
             "INSERT OR REPLACE INTO scheduled_tasks VALUES (?,?,?,?,?,?)",
             (
-                task.task_id, json.dumps(task.to_dict()),
-                1 if task.enabled else 0, task.tenant_id,
+                task.task_id,
+                json.dumps(task.to_dict()),
+                1 if task.enabled else 0,
+                task.tenant_id,
                 task.next_run.isoformat() if task.next_run else None,
                 task.created_at.isoformat(),
             ),
@@ -93,7 +94,8 @@ class ScheduleStore:
             )
         elif tenant_id:
             cursor = conn.execute(
-                "SELECT data FROM scheduled_tasks WHERE tenant_id=?", (tenant_id,),
+                "SELECT data FROM scheduled_tasks WHERE tenant_id=?",
+                (tenant_id,),
             )
         elif enabled_only:
             cursor = conn.execute("SELECT data FROM scheduled_tasks WHERE enabled=1")
@@ -108,11 +110,15 @@ class ScheduleStore:
         conn.execute(
             "INSERT OR REPLACE INTO task_runs VALUES (?,?,?,?,?,?,?,?,?)",
             (
-                run.run_id, run.task_id, run.started_at.isoformat(),
+                run.run_id,
+                run.task_id,
+                run.started_at.isoformat(),
                 run.completed_at.isoformat() if run.completed_at else None,
                 run.status,
                 json.dumps(run.result) if run.result else None,
-                run.checkpoint_used, run.error, run.duration,
+                run.checkpoint_used,
+                run.error,
+                run.duration,
             ),
         )
         conn.commit()
@@ -138,7 +144,8 @@ class ScheduleStore:
 
     def _row_to_run(self, row: tuple) -> TaskRun:
         return TaskRun(
-            run_id=row[0], task_id=row[1],
+            run_id=row[0],
+            task_id=row[1],
             started_at=datetime.fromisoformat(row[2]),
             completed_at=datetime.fromisoformat(row[3]) if row[3] else None,
             status=row[4],
@@ -177,8 +184,7 @@ class TaskScheduler:
         """Register a new recurring task."""
         task.compute_next_run()
         await self._store.save_task(task)
-        logger.info("Registered task: %s (%s) next_run=%s",
-                     task.name, task.task_id, task.next_run)
+        logger.info("Registered task: %s (%s) next_run=%s", task.name, task.task_id, task.next_run)
         return task.task_id
 
     async def unregister(self, task_id: str) -> bool:
@@ -225,8 +231,9 @@ class TaskScheduler:
     async def start(self):
         """Start the scheduler loop."""
         self._running = True
-        logger.info("Scheduler started (check_interval=%ds, max_concurrent=%d)",
-                     self._check_interval, self._max_concurrent)
+        logger.info(
+            "Scheduler started (check_interval=%ds, max_concurrent=%d)", self._check_interval, self._max_concurrent
+        )
 
         while self._running:
             try:
@@ -268,13 +275,9 @@ class TaskScheduler:
         for task in tasks:
             if task.next_run and task.next_run <= now:
                 if task.task_id not in self._active_runs:
-                    run_task = asyncio.create_task(
-                        self._run_with_semaphore(task)
-                    )
+                    run_task = asyncio.create_task(self._run_with_semaphore(task))
                     self._active_runs[task.task_id] = run_task
-                    run_task.add_done_callback(
-                        lambda t, tid=task.task_id: self._active_runs.pop(tid, None)
-                    )
+                    run_task.add_done_callback(lambda t, tid=task.task_id: self._active_runs.pop(tid, None))
 
     async def _run_with_semaphore(self, task: RecurringTask):
         """Execute task with concurrency control."""
@@ -341,6 +344,5 @@ class TaskScheduler:
         task.compute_next_run()
         await self._store.save_task(task)
 
-        logger.info("Task run completed: %s status=%s duration=%.1fs",
-                     run.run_id, run.status, run.duration or 0)
+        logger.info("Task run completed: %s status=%s duration=%.1fs", run.run_id, run.status, run.duration or 0)
         return run

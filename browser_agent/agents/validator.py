@@ -10,7 +10,7 @@ The Validator Agent is responsible for:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Callable, Union
+from typing import Any, Dict, List, Optional, Callable
 from datetime import datetime
 import uuid
 import re
@@ -25,6 +25,7 @@ from .base import (
 
 class ValidationType(Enum):
     """Types of validation."""
+
     SUCCESS_CHECK = "success_check"
     ELEMENT_PRESENT = "element_present"
     ELEMENT_ABSENT = "element_absent"
@@ -39,6 +40,7 @@ class ValidationType(Enum):
 
 class ValidationSeverity(Enum):
     """Severity of validation failures."""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -48,6 +50,7 @@ class ValidationSeverity(Enum):
 @dataclass
 class ValidationCriteria:
     """Criteria for validation."""
+
     validation_type: ValidationType
     expected_value: Any = None
     selector: Optional[str] = None
@@ -57,7 +60,7 @@ class ValidationCriteria:
     is_required: bool = True
     error_message: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -76,12 +79,13 @@ class ValidationCriteria:
 @dataclass
 class ValidationFailure:
     """Details of a validation failure."""
+
     criteria: ValidationCriteria
     actual_value: Any
     message: str
     severity: ValidationSeverity
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -96,6 +100,7 @@ class ValidationFailure:
 @dataclass
 class ValidationResult:
     """Result of validation."""
+
     validation_id: str
     success: bool
     passed: int
@@ -106,19 +111,19 @@ class ValidationResult:
     data: Dict[str, Any] = field(default_factory=dict)
     duration_ms: float = 0.0
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     @property
     def total(self) -> int:
         """Total validations performed."""
         return self.passed + self.failed + self.skipped
-    
+
     @property
     def pass_rate(self) -> float:
         """Pass rate as percentage."""
         if self.total == 0:
             return 100.0
         return (self.passed / self.total) * 100
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -140,6 +145,7 @@ class ValidationResult:
 @dataclass
 class ValidationRequest:
     """Request for validation."""
+
     criteria: List[ValidationCriteria]
     action_result: Optional[Dict[str, Any]] = None
     page_state: Optional[Dict[str, Any]] = None
@@ -151,14 +157,14 @@ class ValidationRequest:
 class ValidatorAgent(BaseAgent):
     """
     Agent responsible for validating action results.
-    
+
     Capabilities:
     - Verify expected outcomes
     - Check page state
     - Detect errors
     - Generate validation reports
     """
-    
+
     def __init__(
         self,
         config: Optional[AgentConfig] = None,
@@ -177,19 +183,19 @@ class ValidatorAgent(BaseAgent):
         self._browser = browser
         self._vision_client = vision_client
         self._custom_validators: Dict[str, Callable] = {}
-    
+
     def set_browser(self, browser: Any) -> None:
         """Set the browser instance."""
         self._browser = browser
-    
+
     def set_vision_client(self, vision_client: Any) -> None:
         """Set the vision client."""
         self._vision_client = vision_client
-    
+
     def register_validator(self, name: str, func: Callable) -> None:
         """Register a custom validator function."""
         self._custom_validators[name] = func
-    
+
     async def execute(self, task: Any) -> AgentResult:
         """Execute a validation task."""
         if isinstance(task, ValidationRequest):
@@ -226,22 +232,24 @@ class ValidatorAgent(BaseAgent):
                 task_id="unknown",
                 error=f"Unknown task type: {type(task)}",
             )
-    
+
     def _parse_validation_request(self, data: Dict[str, Any]) -> ValidationRequest:
         """Parse a dictionary into a ValidationRequest."""
         criteria = []
         for c in data.get("criteria", []):
-            criteria.append(ValidationCriteria(
-                validation_type=ValidationType(c.get("validation_type", "success_check")),
-                expected_value=c.get("expected_value"),
-                selector=c.get("selector"),
-                attribute=c.get("attribute"),
-                regex_pattern=c.get("regex_pattern"),
-                custom_validator=c.get("custom_validator"),
-                is_required=c.get("is_required", True),
-                error_message=c.get("error_message"),
-            ))
-        
+            criteria.append(
+                ValidationCriteria(
+                    validation_type=ValidationType(c.get("validation_type", "success_check")),
+                    expected_value=c.get("expected_value"),
+                    selector=c.get("selector"),
+                    attribute=c.get("attribute"),
+                    regex_pattern=c.get("regex_pattern"),
+                    custom_validator=c.get("custom_validator"),
+                    is_required=c.get("is_required", True),
+                    error_message=c.get("error_message"),
+                )
+            )
+
         return ValidationRequest(
             criteria=criteria,
             action_result=data.get("action_result"),
@@ -249,59 +257,65 @@ class ValidatorAgent(BaseAgent):
             stop_on_failure=data.get("stop_on_failure", False),
             metadata=data.get("metadata", {}),
         )
-    
+
     async def validate(self, request: ValidationRequest) -> ValidationResult:
         """Perform validation against criteria."""
         validation_id = str(uuid.uuid4())
         start_time = datetime.now()
-        
+
         passed = 0
         failed = 0
         skipped = 0
         failures = []
         warnings = []
         data = {}
-        
+
         for criteria in request.criteria:
             if request.stop_on_failure and failures:
                 skipped += 1
                 continue
-            
+
             try:
                 result = await self._validate_criteria(criteria, request)
-                
+
                 if result["success"]:
                     passed += 1
                     data[criteria.validation_type.value] = result.get("value")
                 else:
                     if criteria.is_required:
                         failed += 1
-                        failures.append(ValidationFailure(
-                            criteria=criteria,
-                            actual_value=result.get("value"),
-                            message=result.get("message", "Validation failed"),
-                            severity=ValidationSeverity.ERROR,
-                        ))
+                        failures.append(
+                            ValidationFailure(
+                                criteria=criteria,
+                                actual_value=result.get("value"),
+                                message=result.get("message", "Validation failed"),
+                                severity=ValidationSeverity.ERROR,
+                            )
+                        )
                     else:
-                        warnings.append(ValidationFailure(
-                            criteria=criteria,
-                            actual_value=result.get("value"),
-                            message=result.get("message", "Validation warning"),
-                            severity=ValidationSeverity.WARNING,
-                        ))
+                        warnings.append(
+                            ValidationFailure(
+                                criteria=criteria,
+                                actual_value=result.get("value"),
+                                message=result.get("message", "Validation warning"),
+                                severity=ValidationSeverity.WARNING,
+                            )
+                        )
                         passed += 1  # Non-required failures still count as passed
-                        
+
             except Exception as e:
                 failed += 1
-                failures.append(ValidationFailure(
-                    criteria=criteria,
-                    actual_value=str(e),
-                    message=f"Validation error: {str(e)}",
-                    severity=ValidationSeverity.ERROR,
-                ))
-        
+                failures.append(
+                    ValidationFailure(
+                        criteria=criteria,
+                        actual_value=str(e),
+                        message=f"Validation error: {str(e)}",
+                        severity=ValidationSeverity.ERROR,
+                    )
+                )
+
         duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-        
+
         return ValidationResult(
             validation_id=validation_id,
             success=failed == 0,
@@ -313,7 +327,7 @@ class ValidatorAgent(BaseAgent):
             data=data,
             duration_ms=duration_ms,
         )
-    
+
     async def _validate_criteria(
         self,
         criteria: ValidationCriteria,
@@ -321,7 +335,7 @@ class ValidatorAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Validate a single criteria."""
         validation_type = criteria.validation_type
-        
+
         if validation_type == ValidationType.SUCCESS_CHECK:
             return await self._validate_success(criteria, request)
         elif validation_type == ValidationType.ELEMENT_PRESENT:
@@ -347,7 +361,7 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": f"Unknown validation type: {validation_type}",
             }
-    
+
     async def _validate_success(
         self,
         criteria: ValidationCriteria,
@@ -365,7 +379,7 @@ class ValidatorAgent(BaseAgent):
             "success": False,
             "message": "No action result provided",
         }
-    
+
     async def _validate_element_present(
         self,
         criteria: ValidationCriteria,
@@ -376,15 +390,15 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": "Browser or selector not available",
             }
-        
+
         try:
             page = self._browser.get_current_page()
             if not page:
                 return {"success": False, "message": "No active page"}
-            
+
             element = await page.query_selector(criteria.selector)
             is_present = element is not None
-            
+
             if is_present:
                 is_visible = await element.is_visible()
                 return {
@@ -402,7 +416,7 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": str(e),
             }
-    
+
     async def _validate_element_absent(
         self,
         criteria: ValidationCriteria,
@@ -413,15 +427,15 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": "Browser or selector not available",
             }
-        
+
         try:
             page = self._browser.get_current_page()
             if not page:
                 return {"success": False, "message": "No active page"}
-            
+
             element = await page.query_selector(criteria.selector)
             is_absent = element is None
-            
+
             return {
                 "success": is_absent,
                 "value": {"absent": is_absent},
@@ -432,7 +446,7 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": str(e),
             }
-    
+
     async def _validate_text_present(
         self,
         criteria: ValidationCriteria,
@@ -443,14 +457,14 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": "Browser not available",
             }
-        
+
         try:
             page = self._browser.get_current_page()
             if not page:
                 return {"success": False, "message": "No active page"}
-            
+
             expected_text = str(criteria.expected_value) if criteria.expected_value else ""
-            
+
             if criteria.selector:
                 element = await page.query_selector(criteria.selector)
                 if element:
@@ -462,13 +476,13 @@ class ValidatorAgent(BaseAgent):
                     }
             else:
                 text = await page.text_content("body") or ""
-            
+
             if criteria.regex_pattern:
                 pattern = re.compile(criteria.regex_pattern)
                 is_present = bool(pattern.search(text))
             else:
                 is_present = expected_text.lower() in text.lower()
-            
+
             return {
                 "success": is_present,
                 "value": text[:200],  # Truncate for response
@@ -479,7 +493,7 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": str(e),
             }
-    
+
     async def _validate_text_absent(
         self,
         criteria: ValidationCriteria,
@@ -490,14 +504,14 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": "Browser not available",
             }
-        
+
         try:
             page = self._browser.get_current_page()
             if not page:
                 return {"success": False, "message": "No active page"}
-            
+
             forbidden_text = str(criteria.expected_value) if criteria.expected_value else ""
-            
+
             if criteria.selector:
                 element = await page.query_selector(criteria.selector)
                 if element:
@@ -506,9 +520,9 @@ class ValidatorAgent(BaseAgent):
                     return {"success": True, "value": "Element not found"}
             else:
                 text = await page.text_content("body") or ""
-            
+
             is_absent = forbidden_text.lower() not in text.lower()
-            
+
             return {
                 "success": is_absent,
                 "value": is_absent,
@@ -519,7 +533,7 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": str(e),
             }
-    
+
     async def _validate_url_match(
         self,
         criteria: ValidationCriteria,
@@ -530,21 +544,21 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": "Browser not available",
             }
-        
+
         try:
             page = self._browser.get_current_page()
             if not page:
                 return {"success": False, "message": "No active page"}
-            
+
             current_url = page.url
             expected_url = str(criteria.expected_value) if criteria.expected_value else ""
-            
+
             if criteria.regex_pattern:
                 pattern = re.compile(criteria.regex_pattern)
                 is_match = bool(pattern.match(current_url))
             else:
                 is_match = current_url == expected_url
-            
+
             return {
                 "success": is_match,
                 "value": current_url,
@@ -555,7 +569,7 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": str(e),
             }
-    
+
     async def _validate_url_contains(
         self,
         criteria: ValidationCriteria,
@@ -566,17 +580,17 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": "Browser not available",
             }
-        
+
         try:
             page = self._browser.get_current_page()
             if not page:
                 return {"success": False, "message": "No active page"}
-            
+
             current_url = page.url
             expected_part = str(criteria.expected_value) if criteria.expected_value else ""
-            
+
             is_match = expected_part.lower() in current_url.lower()
-            
+
             return {
                 "success": is_match,
                 "value": current_url,
@@ -587,7 +601,7 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": str(e),
             }
-    
+
     async def _validate_value(
         self,
         criteria: ValidationCriteria,
@@ -595,7 +609,7 @@ class ValidatorAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Validate a specific value."""
         actual_value = None
-        
+
         # Get value from different sources
         if criteria.selector and self._browser:
             try:
@@ -613,22 +627,22 @@ class ValidatorAgent(BaseAgent):
             actual_value = request.action_result.get("data")
         elif request.page_state:
             actual_value = request.page_state.get(criteria.attribute or "value")
-        
+
         expected_value = criteria.expected_value
-        
+
         # Compare values
         if criteria.regex_pattern and actual_value:
             pattern = re.compile(criteria.regex_pattern)
             is_match = bool(pattern.match(str(actual_value)))
         else:
             is_match = actual_value == expected_value
-        
+
         return {
             "success": is_match,
             "value": actual_value,
             "message": "Value matches" if is_match else f"Value mismatch: {actual_value} != {expected_value}",
         }
-    
+
     async def _validate_state(
         self,
         criteria: ValidationCriteria,
@@ -640,18 +654,18 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": "Browser not available",
             }
-        
+
         try:
             page = self._browser.get_current_page()
             if not page:
                 return {"success": False, "message": "No active page"}
-            
+
             # Check ready state
             ready_state = await page.evaluate("document.readyState")
             expected_state = str(criteria.expected_value) if criteria.expected_value else "complete"
-            
+
             is_match = ready_state == expected_state
-            
+
             return {
                 "success": is_match,
                 "value": ready_state,
@@ -662,7 +676,7 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": str(e),
             }
-    
+
     async def _validate_custom(
         self,
         criteria: ValidationCriteria,
@@ -670,13 +684,13 @@ class ValidatorAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """Run a custom validator."""
         validator_name = criteria.custom_validator
-        
+
         if not validator_name:
             return {
                 "success": False,
                 "message": "No custom validator specified",
             }
-        
+
         if validator_name in self._custom_validators:
             try:
                 validator = self._custom_validators[validator_name]
@@ -692,51 +706,59 @@ class ValidatorAgent(BaseAgent):
                 "success": False,
                 "message": f"Unknown custom validator: {validator_name}",
             }
-    
+
     # Convenience methods
-    
+
     async def validate_success(self, action_result: Dict[str, Any]) -> ValidationResult:
         """Validate that an action succeeded."""
         request = ValidationRequest(
-            criteria=[ValidationCriteria(
-                validation_type=ValidationType.SUCCESS_CHECK,
-            )],
+            criteria=[
+                ValidationCriteria(
+                    validation_type=ValidationType.SUCCESS_CHECK,
+                )
+            ],
             action_result=action_result,
         )
         return await self.validate(request)
-    
+
     async def validate_element_exists(self, selector: str) -> ValidationResult:
         """Validate that an element exists."""
         request = ValidationRequest(
-            criteria=[ValidationCriteria(
-                validation_type=ValidationType.ELEMENT_PRESENT,
-                selector=selector,
-            )],
+            criteria=[
+                ValidationCriteria(
+                    validation_type=ValidationType.ELEMENT_PRESENT,
+                    selector=selector,
+                )
+            ],
         )
         return await self.validate(request)
-    
+
     async def validate_url(self, expected: str, exact: bool = True) -> ValidationResult:
         """Validate current URL."""
         validation_type = ValidationType.URL_MATCH if exact else ValidationType.URL_CONTAINS
         request = ValidationRequest(
-            criteria=[ValidationCriteria(
-                validation_type=validation_type,
-                expected_value=expected,
-            )],
+            criteria=[
+                ValidationCriteria(
+                    validation_type=validation_type,
+                    expected_value=expected,
+                )
+            ],
         )
         return await self.validate(request)
-    
+
     async def validate_text_on_page(self, text: str, present: bool = True) -> ValidationResult:
         """Validate text presence on page."""
         validation_type = ValidationType.TEXT_PRESENT if present else ValidationType.TEXT_ABSENT
         request = ValidationRequest(
-            criteria=[ValidationCriteria(
-                validation_type=validation_type,
-                expected_value=text,
-            )],
+            criteria=[
+                ValidationCriteria(
+                    validation_type=validation_type,
+                    expected_value=text,
+                )
+            ],
         )
         return await self.validate(request)
-    
+
     async def create_combined_validation(
         self,
         checks: List[Dict[str, Any]],
@@ -744,13 +766,15 @@ class ValidatorAgent(BaseAgent):
         """Create and run multiple validations."""
         criteria = []
         for check in checks:
-            criteria.append(ValidationCriteria(
-                validation_type=ValidationType(check.get("type", "success_check")),
-                expected_value=check.get("expected"),
-                selector=check.get("selector"),
-                attribute=check.get("attribute"),
-                is_required=check.get("required", True),
-            ))
-        
+            criteria.append(
+                ValidationCriteria(
+                    validation_type=ValidationType(check.get("type", "success_check")),
+                    expected_value=check.get("expected"),
+                    selector=check.get("selector"),
+                    attribute=check.get("attribute"),
+                    is_required=check.get("required", True),
+                )
+            )
+
         request = ValidationRequest(criteria=criteria)
         return await self.validate(request)

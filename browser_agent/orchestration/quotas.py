@@ -1,9 +1,8 @@
 """Quota tracking and enforcement per tenant."""
 
-import json
 import os
 import sqlite3
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
@@ -111,10 +110,7 @@ class QuotaStore:
         )
         rows = cursor.fetchall()
         conn.close()
-        return [
-            {"resource": r[0], "used": r[1], "limit": r[2], "period": r[3], "reset_at": r[4]}
-            for r in rows
-        ]
+        return [{"resource": r[0], "used": r[1], "limit": r[2], "period": r[3], "reset_at": r[4]} for r in rows]
 
 
 class QuotaManager:

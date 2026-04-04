@@ -1,10 +1,7 @@
 """Fair-share scheduler across tenants."""
 
 import asyncio
-import json
 import logging
-import os
-import sqlite3
 import time
 import uuid
 from collections import defaultdict
@@ -12,7 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
-from .tenant_manager import TenantManager, Tenant
+from .tenant_manager import TenantManager
 from .resource_pool import ResourcePool
 from .quotas import QuotaManager
 
@@ -22,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TenantTask:
     """Task scoped to a tenant."""
+
     task_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     tenant_id: str = "default"
     goal: str = ""

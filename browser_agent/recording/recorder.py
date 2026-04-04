@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RecordedAction:
     """A single recorded action."""
+
     action_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     step_index: int = 0
-    action_type: str = ""                         # click, type_text, navigate, etc.
+    action_type: str = ""  # click, type_text, navigate, etc.
     target_url: str = ""
     parameters: Dict[str, Any] = field(default_factory=dict)
 
@@ -110,9 +111,10 @@ class RecordedAction:
 @dataclass
 class RecordingParameter:
     """A parameterized value in a recording."""
+
     name: str = ""
     display_name: str = ""
-    parameter_type: str = "text"       # text, url, select, date, email
+    parameter_type: str = "text"  # text, url, select, date, email
     default_value: Any = None
     required: bool = True
     description: Optional[str] = None
@@ -141,6 +143,7 @@ class RecordingParameter:
 @dataclass
 class Recording:
     """A recorded workflow."""
+
     recording_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     description: str = ""
@@ -217,8 +220,12 @@ class Recording:
             start_url=data.get("start_url", ""),
             end_url=data.get("end_url"),
             parameters=[RecordingParameter.from_dict(p) for p in data.get("parameters", [])],
-            created_at=datetime.fromisoformat(data["created_at"]) if data.get("created_at") else datetime.now(timezone.utc),
-            updated_at=datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else datetime.now(timezone.utc),
+            created_at=(
+                datetime.fromisoformat(data["created_at"]) if data.get("created_at") else datetime.now(timezone.utc)
+            ),
+            updated_at=(
+                datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else datetime.now(timezone.utc)
+            ),
             version=data.get("version", 1),
             tags=data.get("tags", []),
             run_count=data.get("run_count", 0),
@@ -232,8 +239,7 @@ class Recording:
     def compute_hash(self) -> str:
         """Hash of all action types + targets for change detection."""
         payload = json.dumps(
-            [{"type": a.action_type, "url": a.target_url, "selector": a.target_selector}
-             for a in self.actions],
+            [{"type": a.action_type, "url": a.target_url, "selector": a.target_selector} for a in self.actions],
             sort_keys=True,
         )
         return hashlib.sha256(payload.encode()).hexdigest()
@@ -389,6 +395,7 @@ class WorkflowRecorder:
             return None
 
         import time
+
         action = RecordedAction(
             step_index=len(self._current.actions),
             action_type=action_type,

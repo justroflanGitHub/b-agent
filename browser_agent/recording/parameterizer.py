@@ -4,7 +4,7 @@ import re
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from .recorder import Recording, RecordedAction, RecordingParameter
+from .recorder import Recording, RecordingParameter
 
 logger = logging.getLogger(__name__)
 
@@ -90,13 +90,15 @@ class RecordingParameterizer:
         # Add parameter definition
         existing = [p.name for p in recording.parameters]
         if parameter_name not in existing:
-            recording.parameters.append(RecordingParameter(
-                name=parameter_name,
-                display_name=display_name or parameter_name,
-                parameter_type=parameter_type,
-                default_value=original_value,
-                required=True,
-            ))
+            recording.parameters.append(
+                RecordingParameter(
+                    name=parameter_name,
+                    display_name=display_name or parameter_name,
+                    parameter_type=parameter_type,
+                    default_value=original_value,
+                    required=True,
+                )
+            )
 
         return recording
 
@@ -135,15 +137,11 @@ class RecordingParameterizer:
 
             if value is not None and param_def.validation_pattern:
                 if not re.match(param_def.validation_pattern, str(value)):
-                    errors.append(
-                        f"Parameter '{param_def.name}' doesn't match pattern: {param_def.validation_pattern}"
-                    )
+                    errors.append(f"Parameter '{param_def.name}' doesn't match pattern: {param_def.validation_pattern}")
 
             if value is not None and param_def.options:
                 if str(value) not in param_def.options:
-                    errors.append(
-                        f"Parameter '{param_def.name}' must be one of: {param_def.options}"
-                    )
+                    errors.append(f"Parameter '{param_def.name}' must be one of: {param_def.options}")
 
         return len(errors) == 0, errors
 

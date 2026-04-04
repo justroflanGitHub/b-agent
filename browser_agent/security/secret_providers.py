@@ -12,7 +12,7 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +50,11 @@ class SecretProvider(ABC):
 class SecretNotFoundError(Exception):
     """Raised when a secret is not found in the provider."""
 
-    pass
 
 
 class ProviderError(Exception):
     """Raised when the provider connection or auth fails."""
 
-    pass
 
 
 class EnvironmentProvider(SecretProvider):
@@ -98,13 +96,12 @@ class EnvironmentProvider(SecretProvider):
         for key, value in os.environ.items():
             if key.startswith(prefix) and key not in (secret_key, username_key):
                 # Strip prefix to get field name
-                field_name = key[len(prefix):].lower()
+                field_name = key[len(prefix) :].lower()
                 result[field_name] = value
 
         if not result:
             raise SecretNotFoundError(
-                f"No environment variables found for credential '{path}' "
-                f"(looked for {secret_key})"
+                f"No environment variables found for credential '{path}' " f"(looked for {secret_key})"
             )
 
         return result
@@ -151,9 +148,7 @@ class HashiCorpVaultProvider(SecretProvider):
         try:
             import hvac
         except ImportError:
-            raise ProviderError(
-                "hvac package not installed. Install with: pip install hvac"
-            )
+            raise ProviderError("hvac package not installed. Install with: pip install hvac")
 
         client = hvac.Client(url=self._url, namespace=self._namespace)
 
@@ -234,9 +229,7 @@ class AWSSecretsManagerProvider(SecretProvider):
         try:
             import boto3
         except ImportError:
-            raise ProviderError(
-                "boto3 package not installed. Install with: pip install boto3"
-            )
+            raise ProviderError("boto3 package not installed. Install with: pip install boto3")
 
         kwargs = {"region_name": self._region}
         if self._access_key_id and self._secret_access_key:
@@ -303,8 +296,7 @@ class AzureKeyVaultProvider(SecretProvider):
             from azure.keyvault.secrets import SecretClient
         except ImportError:
             raise ProviderError(
-                "Azure packages not installed. Install with: "
-                "pip install azure-identity azure-keyvault-secrets"
+                "Azure packages not installed. Install with: " "pip install azure-identity azure-keyvault-secrets"
             )
 
         if self._tenant_id and self._client_id and self._client_secret:

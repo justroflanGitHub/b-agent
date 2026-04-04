@@ -5,7 +5,7 @@ Used by the audit trail and DLP engine.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -127,12 +127,14 @@ class DataClassifier:
             if not results:
                 return ClassificationResult(
                     sensitivity=SensitivityLevel.PUBLIC,
-                    categories=[], pii_fields=[], phi_fields=[],
-                    financial_fields=[], confidence=1.0, rules_matched=[],
+                    categories=[],
+                    pii_fields=[],
+                    phi_fields=[],
+                    financial_fields=[],
+                    confidence=1.0,
+                    rules_matched=[],
                 )
-            max_sensitivity = max(
-                results, key=lambda r: list(SensitivityLevel).index(r.sensitivity)
-            )
+            max_sensitivity = max(results, key=lambda r: list(SensitivityLevel).index(r.sensitivity))
             return ClassificationResult(
                 sensitivity=max_sensitivity.sensitivity,
                 categories=list(set(c for r in results for c in r.categories)),
@@ -145,8 +147,12 @@ class DataClassifier:
         else:
             return ClassificationResult(
                 sensitivity=SensitivityLevel.PUBLIC,
-                categories=[], pii_fields=[], phi_fields=[],
-                financial_fields=[], confidence=1.0, rules_matched=[],
+                categories=[],
+                pii_fields=[],
+                phi_fields=[],
+                financial_fields=[],
+                confidence=1.0,
+                rules_matched=[],
             )
 
     def classify_field(self, field_name: str, field_value: Any) -> FieldClassification:

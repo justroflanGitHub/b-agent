@@ -11,7 +11,7 @@ The Supervisor Agent is responsible for:
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Type
+from typing import Any, Dict, List, Optional, Set
 from datetime import datetime
 import asyncio
 import uuid
@@ -26,17 +26,17 @@ from .base import (
 from .communication import (
     AgentMessage,
     MessageType,
-    MessagePriority,
     AgentCommunicationBus,
 )
 from .planner import PlannerAgent, TaskPlan, PlanStep, StepStatus
-from .analyzer import AnalyzerAgent, AnalysisRequest, AnalysisResult
-from .actor import ActorAgent, ActionRequest, ActionResult
-from .validator import ValidatorAgent, ValidationRequest, ValidationResult
+from .analyzer import AnalyzerAgent
+from .actor import ActorAgent, ActionRequest
+from .validator import ValidatorAgent
 
 
 class TaskStatus(Enum):
     """Status of a delegated task."""
+
     PENDING = "pending"
     PLANNING = "planning"
     EXECUTING = "executing"
@@ -49,6 +49,7 @@ class TaskStatus(Enum):
 @dataclass
 class TaskDelegation:
     """Record of a delegated task."""
+
     task_id: str
     description: str
     status: TaskStatus
@@ -61,13 +62,13 @@ class TaskDelegation:
     completed_at: Optional[datetime] = None
     error: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def duration_seconds(self) -> Optional[float]:
         """Calculate task duration."""
         if self.started_at and self.completed_at:
             return (self.completed_at - self.started_at).total_seconds()
         return None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -90,6 +91,7 @@ class TaskDelegation:
 @dataclass
 class SupervisorConfig:
     """Configuration for the supervisor agent."""
+
     max_concurrent_tasks: int = 5
     task_timeout: float = 600.0  # 10 minutes
     step_timeout: float = 60.0  # 1 minute
@@ -103,16 +105,17 @@ class SupervisorConfig:
 @dataclass
 class AgentPool:
     """Pool of available agents."""
+
     planner: Optional[PlannerAgent] = None
     analyzer: Optional[AnalyzerAgent] = None
     actor: Optional[ActorAgent] = None
     validator: Optional[ValidatorAgent] = None
     _all_agents: Dict[str, BaseAgent] = field(default_factory=dict)
-    
+
     def register(self, agent: BaseAgent) -> None:
         """Register an agent in the pool."""
         self._all_agents[agent.agent_id] = agent
-        
+
         # Assign to specific slot based on type
         if isinstance(agent, PlannerAgent):
             self.planner = agent
@@ -122,7 +125,7 @@ class AgentPool:
             self.actor = agent
         elif isinstance(agent, ValidatorAgent):
             self.validator = agent
-    
+
     def unregister(self, agent_id: str) -> None:
         """Unregister an agent."""
         agent = self._all_agents.pop(agent_id, None)
@@ -135,22 +138,23 @@ class AgentPool:
                 self.actor = None
             elif self.validator == agent:
                 self.validator = None
-    
+
     def get_agent(self, agent_id: str) -> Optional[BaseAgent]:
         """Get an agent by ID."""
         return self._all_agents.get(agent_id)
-    
+
     def get_available_agents(self, capability: AgentCapability) -> List[BaseAgent]:
         """Get all agents with a specific capability that are available."""
         return [
-            agent for agent in self._all_agents.values()
+            agent
+            for agent in self._all_agents.values()
             if agent.has_capability(capability) and agent.status == AgentStatus.IDLE
         ]
-    
+
     def all_agents(self) -> List[BaseAgent]:
         """Get all registered agents."""
         return list(self._all_agents.values())
-    
+
     def get_status(self) -> Dict[str, Any]:
         """Get status of all agents."""
         return {
@@ -173,7 +177,7 @@ class AgentPool:
 class SupervisorAgent(BaseAgent):
     """
     Supervisor agent that orchestrates sub-agents.
-    
+
     Responsibilities:
     - Task planning and decomposition
     - Agent coordination
@@ -181,7 +185,7 @@ class SupervisorAgent(BaseAgent):
     - Result validation
     - Failure recovery
     """
-    
+
     def __init__(
         self,
         config: Optional[AgentConfig] = None,
@@ -198,27 +202,27 @@ class SupervisorAgent(BaseAgent):
                 },
             )
         super().__init__(config)
-        
+
         self.supervisor_config = supervisor_config or SupervisorConfig()
         self.communication_bus = communication_bus or AgentCommunicationBus()
         self.agent_pool = AgentPool()
-        
+
         self._active_tasks: Dict[str, TaskDelegation] = {}
         self._task_queue: asyncio.Queue = asyncio.Queue()
         self._results_queue: asyncio.Queue = asyncio.Queue()
         self._running = False
         self._orchestration_task: Optional[asyncio.Task] = None
-    
+
     def register_agent(self, agent: BaseAgent) -> None:
         """Register an agent with the supervisor."""
         self.agent_pool.register(agent)
         # Set up message handler
         agent.set_message_handler(self._handle_agent_message)
-    
+
     def unregister_agent(self, agent_id: str) -> None:
         """Unregister an agent."""
         self.agent_pool.unregister(agent_id)
-    
+
     def setup_default_agents(
         self,
         browser: Optional[Any] = None,
@@ -229,19 +233,19 @@ class SupervisorAgent(BaseAgent):
         # Create planner
         planner = PlannerAgent()
         self.register_agent(planner)
-        
+
         # Create analyzer
         analyzer = AnalyzerAgent(browser=browser, vision_client=vision_client)
         self.register_agent(analyzer)
-        
+
         # Create actor
         actor = ActorAgent(browser=browser, action_executor=action_executor)
         self.register_agent(actor)
-        
+
         # Create validator
         validator = ValidatorAgent(browser=browser, vision_client=vision_client)
         self.register_agent(validator)
-    
+
     async def _handle_agent_message(self, message: AgentMessage) -> None:
         """Handle messages from agents."""
         if message.message_type == MessageType.TASK_RESULT:
@@ -249,21 +253,21 @@ class SupervisorAgent(BaseAgent):
             task_id = message.correlation_id
             if task_id and task_id in self._active_tasks:
                 await self._results_queue.put((task_id, message.payload))
-        
+
         elif message.message_type == MessageType.STATUS_UPDATE:
             # Handle status update
             pass
-        
+
         elif message.message_type == MessageType.ERROR:
             # Handle error
             if message.correlation_id and message.correlation_id in self._active_tasks:
                 delegation = self._active_tasks[message.correlation_id]
                 delegation.error = str(message.payload)
-    
+
     async def execute(self, task: Any) -> AgentResult:
         """Execute a supervised task."""
         task_id = str(uuid.uuid4())
-        
+
         # Create delegation record
         delegation = TaskDelegation(
             task_id=task_id,
@@ -271,7 +275,7 @@ class SupervisorAgent(BaseAgent):
             status=TaskStatus.PENDING,
         )
         self._active_tasks[task_id] = delegation
-        
+
         try:
             # Execute the task
             result = await self._execute_supervised_task(task_id, task)
@@ -286,17 +290,17 @@ class SupervisorAgent(BaseAgent):
                 task_id=task_id,
                 error=str(e),
             )
-    
+
     async def _execute_supervised_task(self, task_id: str, task: Any) -> AgentResult:
         """Execute a task with full supervision."""
         delegation = self._active_tasks[task_id]
         delegation.started_at = datetime.now()
-        
+
         # Phase 1: Planning
         delegation.status = TaskStatus.PLANNING
         plan = await self._create_plan(task)
         delegation.plan = plan
-        
+
         if not plan or plan.has_failed():
             delegation.status = TaskStatus.FAILED
             delegation.completed_at = datetime.now()
@@ -306,23 +310,23 @@ class SupervisorAgent(BaseAgent):
                 task_id=task_id,
                 error="Planning failed",
             )
-        
+
         # Phase 2: Execution
         delegation.status = TaskStatus.EXECUTING
-        
+
         for step in plan.steps:
             if delegation.status == TaskStatus.CANCELLED:
                 break
-            
+
             # Check if step is ready
             if not step.is_ready(plan.step_results):
                 continue
-            
+
             # Execute step
             step_result = await self._execute_step(task_id, step, delegation)
             plan.mark_step_completed(step.step_id, step_result)
             delegation.step_results[step.step_id] = step_result
-            
+
             # Handle step failure
             if not step_result.success:
                 if step.on_failure == "abort":
@@ -339,20 +343,20 @@ class SupervisorAgent(BaseAgent):
                             plan.mark_step_completed(step.step_id, retry_result)
                             delegation.step_results[step.step_id] = retry_result
                             break
-        
+
         # Phase 3: Validation
         if delegation.status == TaskStatus.EXECUTING:
             delegation.status = TaskStatus.VALIDATING
             # Validation is done per-step, but we can do final validation here
-        
+
         # Finalize
         if plan.is_complete() and not plan.has_failed():
             delegation.status = TaskStatus.COMPLETED
         elif delegation.status != TaskStatus.CANCELLED:
             delegation.status = TaskStatus.FAILED
-        
+
         delegation.completed_at = datetime.now()
-        
+
         return AgentResult(
             success=delegation.status == TaskStatus.COMPLETED,
             agent_id=self.agent_id,
@@ -364,28 +368,29 @@ class SupervisorAgent(BaseAgent):
                 "steps_failed": sum(1 for s in plan.steps if s.status == StepStatus.FAILED),
             },
         )
-    
+
     async def _create_plan(self, task: Any) -> Optional[TaskPlan]:
         """Create an execution plan using the planner agent."""
         if not self.agent_pool.planner:
             # Create a simple single-step plan
             from .planner import PlanningRequest
+
             planner = PlannerAgent()
             request = PlanningRequest(task_description=str(task))
             return await planner.create_plan(request)
-        
+
         planner = self.agent_pool.planner
         from .planner import PlanningRequest
-        
+
         request = PlanningRequest(task_description=str(task))
         result = await planner.execute(request)
-        
+
         if result.success and result.data:
             # Reconstruct plan from dict
             return self._reconstruct_plan(result.data)
-        
+
         return None
-    
+
     def _reconstruct_plan(self, data: Dict[str, Any]) -> TaskPlan:
         """Reconstruct a TaskPlan from dictionary."""
         steps = []
@@ -401,13 +406,13 @@ class SupervisorAgent(BaseAgent):
                 on_failure=step_data.get("on_failure", "abort"),
             )
             steps.append(step)
-        
+
         return TaskPlan(
             plan_id=data["plan_id"],
             task_description=data["task_description"],
             steps=steps,
         )
-    
+
     async def _execute_step(
         self,
         task_id: str,
@@ -416,21 +421,27 @@ class SupervisorAgent(BaseAgent):
     ) -> AgentResult:
         """Execute a single step using appropriate agents."""
         step_type = step.step_type
-        
+
         # Determine which agent to use
-        if step_type in [StepType.NAVIGATE, StepType.CLICK, StepType.TYPE, 
-                         StepType.SCROLL, StepType.WAIT, StepType.SUBTASK]:
+        if step_type in [
+            StepType.NAVIGATE,
+            StepType.CLICK,
+            StepType.TYPE,
+            StepType.SCROLL,
+            StepType.WAIT,
+            StepType.SUBTASK,
+        ]:
             return await self._execute_with_actor(step)
-        
+
         elif step_type == StepType.EXTRACT:
             return await self._execute_with_analyzer(step)
-        
+
         elif step_type == StepType.VALIDATE:
             return await self._execute_with_validator(step)
-        
+
         elif step_type == StepType.CONDITION:
             return await self._evaluate_condition(step, delegation)
-        
+
         else:
             return AgentResult(
                 success=False,
@@ -438,7 +449,7 @@ class SupervisorAgent(BaseAgent):
                 task_id=step.step_id,
                 error=f"Unknown step type: {step_type}",
             )
-    
+
     async def _execute_with_actor(self, step: PlanStep) -> AgentResult:
         """Execute a step using the actor agent."""
         if not self.agent_pool.actor:
@@ -448,7 +459,7 @@ class SupervisorAgent(BaseAgent):
                 task_id=step.step_id,
                 error="No actor agent available",
             )
-        
+
         # Convert step to action request
         action_type = self._step_to_action_type(step.step_type)
         request = ActionRequest(
@@ -458,9 +469,9 @@ class SupervisorAgent(BaseAgent):
             url=step.parameters.get("url"),
             timeout=step.timeout,
         )
-        
+
         return await self.agent_pool.actor.execute(request)
-    
+
     async def _execute_with_analyzer(self, step: PlanStep) -> AgentResult:
         """Execute a step using the analyzer agent."""
         if not self.agent_pool.analyzer:
@@ -470,16 +481,16 @@ class SupervisorAgent(BaseAgent):
                 task_id=step.step_id,
                 error="No analyzer agent available",
             )
-        
+
         from .analyzer import AnalysisType, AnalysisRequest
-        
+
         request = AnalysisRequest(
             analysis_type=AnalysisType.CONTENT_EXTRACTION,
             selectors=step.parameters.get("selectors"),
         )
-        
+
         return await self.agent_pool.analyzer.execute(request)
-    
+
     async def _execute_with_validator(self, step: PlanStep) -> AgentResult:
         """Execute a step using the validator agent."""
         if not self.agent_pool.validator:
@@ -489,43 +500,45 @@ class SupervisorAgent(BaseAgent):
                 task_id=step.step_id,
                 error="No validator agent available",
             )
-        
+
         from .validator import ValidationType, ValidationCriteria, ValidationRequest
-        
+
         criteria = []
         for c in step.parameters.get("criteria", []):
-            criteria.append(ValidationCriteria(
-                validation_type=ValidationType(c.get("type", "SUCCESS_CHECK")),
-                expected_value=c.get("expected"),
-                selector=c.get("selector"),
-            ))
-        
+            criteria.append(
+                ValidationCriteria(
+                    validation_type=ValidationType(c.get("type", "SUCCESS_CHECK")),
+                    expected_value=c.get("expected"),
+                    selector=c.get("selector"),
+                )
+            )
+
         request = ValidationRequest(criteria=criteria)
         return await self.agent_pool.validator.execute(request)
-    
+
     async def _evaluate_condition(
         self,
         step: PlanStep,
         delegation: TaskDelegation,
     ) -> AgentResult:
         """Evaluate a condition step."""
-        condition = step.parameters.get("condition", "")
-        
+        step.parameters.get("condition", "")
+
         # Simple condition evaluation
         # In a real implementation, this would be more sophisticated
         result = True  # Default to true
-        
+
         return AgentResult(
             success=True,
             agent_id=self.agent_id,
             task_id=step.step_id,
             data={"condition_met": result},
         )
-    
+
     def _step_to_action_type(self, step_type: "StepType") -> "ActionType":
         """Convert step type to action type."""
         from .actor import ActionType
-        
+
         mapping = {
             StepType.NAVIGATE: ActionType.NAVIGATE,
             StepType.CLICK: ActionType.CLICK,
@@ -535,11 +548,11 @@ class SupervisorAgent(BaseAgent):
             StepType.SUBTASK: ActionType.CLICK,  # Default
         }
         return mapping.get(step_type, ActionType.CLICK)
-    
+
     async def submit_task(self, description: str, **kwargs) -> str:
         """Submit a task for execution."""
         task_id = str(uuid.uuid4())
-        
+
         delegation = TaskDelegation(
             task_id=task_id,
             description=description,
@@ -547,17 +560,17 @@ class SupervisorAgent(BaseAgent):
             metadata=kwargs,
         )
         self._active_tasks[task_id] = delegation
-        
+
         await self._task_queue.put((task_id, description, kwargs))
-        
+
         return task_id
-    
+
     async def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Get the status of a task."""
         if task_id in self._active_tasks:
             return self._active_tasks[task_id].to_dict()
         return None
-    
+
     async def cancel_task(self, task_id: str) -> bool:
         """Cancel a running task."""
         if task_id in self._active_tasks:
@@ -567,35 +580,35 @@ class SupervisorAgent(BaseAgent):
                 delegation.completed_at = datetime.now()
                 return True
         return False
-    
+
     async def start(self) -> None:
         """Start the supervisor."""
         await super().start()
-        
+
         # Start all registered agents
         for agent in self.agent_pool.all_agents():
             await agent.start()
-        
+
         self._running = True
         self._orchestration_task = asyncio.create_task(self._orchestration_loop())
-    
+
     async def stop(self) -> None:
         """Stop the supervisor."""
         self._running = False
-        
+
         if self._orchestration_task:
             self._orchestration_task.cancel()
             try:
                 await self._orchestration_task
             except asyncio.CancelledError:
                 pass
-        
+
         # Stop all agents
         for agent in self.agent_pool.all_agents():
             await agent.stop()
-        
+
         await super().stop()
-    
+
     async def _orchestration_loop(self) -> None:
         """Main orchestration loop."""
         while self._running:
@@ -607,18 +620,22 @@ class SupervisorAgent(BaseAgent):
                         timeout=1.0,
                     )
                     # Execute task in background
-                    asyncio.create_task(self.execute({
-                        "description": description,
-                        **kwargs,
-                    }))
+                    asyncio.create_task(
+                        self.execute(
+                            {
+                                "description": description,
+                                **kwargs,
+                            }
+                        )
+                    )
                 except asyncio.TimeoutError:
                     continue
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 self.state.error_history.append(str(e))
-    
+
     def get_supervisor_status(self) -> Dict[str, Any]:
         """Get comprehensive supervisor status."""
         return {
@@ -637,14 +654,14 @@ class SupervisorAgent(BaseAgent):
                 for task_id, delegation in self._active_tasks.items()
             },
         }
-    
+
     async def synthesize_results(self, task_id: str) -> Dict[str, Any]:
         """Synthesize results from all agents for a task."""
         if task_id not in self._active_tasks:
             return {"error": "Task not found"}
-        
+
         delegation = self._active_tasks[task_id]
-        
+
         synthesis = {
             "task_id": task_id,
             "description": delegation.description,
@@ -653,7 +670,7 @@ class SupervisorAgent(BaseAgent):
             "steps": {},
             "summary": {},
         }
-        
+
         # Aggregate step results
         for step_id, result in delegation.step_results.items():
             synthesis["steps"][step_id] = {
@@ -662,18 +679,18 @@ class SupervisorAgent(BaseAgent):
                 "data": result.data,
                 "error": result.error,
             }
-        
+
         # Generate summary
         total_steps = len(delegation.step_results)
         successful_steps = sum(1 for r in delegation.step_results.values() if r.success)
-        
+
         synthesis["summary"] = {
             "total_steps": total_steps,
             "successful_steps": successful_steps,
             "failed_steps": total_steps - successful_steps,
             "success_rate": (successful_steps / total_steps * 100) if total_steps > 0 else 0,
         }
-        
+
         return synthesis
 
 
