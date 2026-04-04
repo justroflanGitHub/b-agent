@@ -1124,9 +1124,13 @@ Screenshot: {self.config.browser.viewport_width}x{self.config.browser.viewport_h
             if page:
                 label_lower = field_label.lower()
                 el_data = await page.evaluate("""(labelText) => {
+                    const searchWords = labelText.split(/\s+/).filter(w => w.length > 2);
                     const labels = Array.from(document.querySelectorAll('label'));
                     for (const label of labels) {
-                        if (label.textContent.toLowerCase().includes(labelText)) {
+                        const labelWords = label.textContent.toLowerCase().trim().split(/\s+/);
+                        // Check bidirectional: do most search words appear in label, or most label words in search?
+                        const matchCount = searchWords.filter(w => labelWords.some(lw => lw.includes(w) || w.includes(lw))).length;
+                        if (matchCount > 0 && matchCount >= Math.ceil(searchWords.length * 0.5)) {
                             const input = label.htmlFor ? document.getElementById(label.htmlFor) : label.querySelector('input,textarea');
                             if (input && input.getBoundingClientRect().width > 0) {
                                 input.focus();
@@ -1140,7 +1144,10 @@ Screenshot: {self.config.browser.viewport_width}x{self.config.browser.viewport_h
                     for (const inp of inputs) {
                         const ph = (inp.placeholder || '').toLowerCase();
                         const nm = (inp.name || '').toLowerCase();
-                        if (ph.includes(labelText) || nm.includes(labelText.replace(/ /g, ''))) {
+                        const id = (inp.id || '').toLowerCase();
+                        const allText = ph + ' ' + nm + ' ' + id;
+                        const matchCount = searchWords.filter(w => allText.includes(w)).length;
+                        if (matchCount > 0 && matchCount >= Math.ceil(searchWords.length * 0.5)) {
                             inp.focus();
                             inp.value = '';
                             const box = inp.getBoundingClientRect();
