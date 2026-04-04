@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DOM field search**: Bidirectional keyword matching so 'Email Address' matches 'Email (required)' label
 - **UI Modal Interaction test now passing**: Already passing with button click validation fixes
 - **UI Tabs Navigation test now passing**: No longer times out, completes in 23s
+- **UI Toggle Switch test now passing**: Agent clicks toggle areas and completes
 - **DOM button fallback**: Uses best-score matching, excludes plain links to avoid cart icon false matches
 - **Search click validation**: Accepts when search button is focused instead of input field
 - **Button click validation**: Also checks goal text for button-like intent, not just action description
