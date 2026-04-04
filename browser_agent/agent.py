@@ -378,14 +378,26 @@ class BrowserAgent:
                                 action["type"] = "press_enter"
                                 logger.info("🔄 Forcing transition: type → press_enter")
                 
-                # Skip already-filled fields
+                # Skip already-filled fields (only if same value)
                 if action_type == "fill_field":
                     fl = action.get("field_label", "")
-                    if fl and fl.lower() in {k.lower() for k in filled_fields}:
-                        logger.info(f"Skipping already-filled field: {fl}")
-                        steps.append({"step": step_num, "action": "skip", "success": True, "data": f"Already filled: {fl}"})
-                        consecutive_failures = 0
-                        continue
+                    fv = action.get("field_value", "") or action.get("text", "")
+                    fl_lower = fl.lower() if fl else ""
+                    if fl_lower and fl_lower in {k.lower() for k in filled_fields}:
+                        # Allow re-fill if the value is different
+                        existing = filled_fields.get(next(k for k in filled_fields if k.lower() == fl_lower), "")
+                        if existing and fv and existing.lower() == fv.lower():
+                            logger.info(f"⏭️ Skipping already-filled field: {fl} (same value)")
+                            steps.append({"step": step_num, "action": "skip", "success": True, "data": f"Already filled: {fl}"})
+                            consecutive_failures = 0
+                            continue
+                        else:
+                            logger.info(f"🔄 Re-filling field {fl} with new value: {fv}")
+                            # Update the tracked value
+                            for k in list(filled_fields.keys()):
+                                if k.lower() == fl_lower:
+                                    filled_fields[k] = fv
+                                    break
 
                 # Check for completion
                 if action_type == "complete" or action.get("complete", False):
