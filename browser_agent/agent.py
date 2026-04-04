@@ -522,34 +522,24 @@ class BrowserAgent:
             
             # For search tasks, check if we're on search results page
             if "search" in goal.lower():
-                # Check URL for search parameters
+                page = self.browser.page
+                # First check for search result elements (works for client-side search too)
+                if page:
+                    selectors = ["div.g", "[data-ved]", ".search-result", ".result", ".article", ".post", "[class*=result]", "[class*=article]"]
+                    for selector in selectors:
+                        try:
+                            elements = await page.query_selector_all(selector)
+                            if len(elements) > 0:
+                                logger.info(f"✅ Found {len(elements)} search results with {selector}")
+                                return {
+                                    "success": True,
+                                    "reason": f"Found {len(elements)} search results on page"
+                                }
+                        except:
+                            continue
+                
+                # Then check URL for search parameters
                 if "search?q=" in current_url or "&q=" in current_url:
-                    # Check for search result elements
-                    page = self.browser.page
-                    if page:
-                        # Look for common search result selectors
-                        selectors = ["div.g", "[data-ved]", "h3", ".search-result"]
-                        for selector in selectors:
-                            try:
-                                elements = await page.query_selector_all(selector)
-                                if len(elements) > 0:
-                                    logger.info(f"✅ Found {len(elements)} search results with {selector}")
-                                    return {
-                                        "success": True,
-                                        "reason": f"Found {len(elements)} search results on page"
-                                    }
-                            except:
-                                continue
-                        
-                        # Check page title
-                        title = await page.title()
-                        search_term = goal.lower().replace("search for", "").strip()
-                        if search_term and search_term in title.lower():
-                            return {
-                                "success": True,
-                                "reason": f"Search term found in page title: {title}"
-                            }
-                    
                     return {
                         "success": True,
                         "reason": "On search results page (URL validated)"
@@ -558,7 +548,7 @@ class BrowserAgent:
                 # Not on search results page
                 return {
                     "success": False,
-                    "reason": "Not on search results page - URL doesn't contain search parameters"
+                    "reason": "Not on search results page - no results found"
                 }
             
             # For non-search tasks, use vision validation
@@ -651,8 +641,13 @@ Return JSON:
                         "reason": f"Contenteditable element focused"
                     }
             
-            # For search tasks, if we clicked on an input field but it's not focused, FAIL
+            # For search tasks, if we clicked on an input field but it's not focused
             if is_search_task and is_input_click:
+                focused_tag = focused_element.get('tag', '') if focused_element else ''
+                if focused_tag == 'BUTTON':
+                    # Clicked near the input but hit the search button instead - still progress
+                    logger.info(f"✅ Search button focused instead of input, accepting")
+                    return {"success": True, "reason": "Search button or nearby element focused"}
                 logger.warning(f"⚠️ Click on input field failed - no input focused. Body element: {focused_element.get('tag') if focused_element else 'none'}")
                 return {
                     "success": False,
