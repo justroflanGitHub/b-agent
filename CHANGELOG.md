@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI Modal Interaction test now passing**: Already passing with button click validation fixes
 - **UI Tabs Navigation test now passing**: No longer times out, completes in 23s
 - **UI Toggle Switch test now passing**: Agent clicks toggle areas and completes
+- **UI Accordion test now passing**: Section 2 expands correctly via DOM clickable div search
+- **UI Progress Bar test now passing**: Progress reaches 100% via DOM button fallback
+- **DOM button fallback**: Expanded to search clickable divs (accordion headers, tabs, toggles)
+- **DOM button fallback**: Uses short text matching (first line only) to avoid container false matches
+- **Scroll loop breaker**: Uses goal-text matching to find relevant buttons instead of hardcoded keywords
+- **Scroll into view**: Elements found off-screen are scrolled into view before clicking
 - **DOM button fallback**: Uses best-score matching, excludes plain links to avoid cart icon false matches
 - **Search click validation**: Accepts when search button is focused instead of input field
 - **Button click validation**: Also checks goal text for button-like intent, not just action description

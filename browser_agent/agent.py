@@ -318,22 +318,37 @@ class BrowserAgent:
                                 logger.info(f"🔄 On {current_url}, going back to find products")
                                 await page.go_back()
                                 await asyncio.sleep(0.5)
-                            _loop_js = "() => {" + """
-                                const btns = Array.from(document.querySelectorAll('button, [role="button"]'));
-                                const matches = [];
-                                for (const btn of btns) {
-                                    const text = (btn.textContent || '').trim().toLowerCase();
-                                    matches.push(text.substring(0, 30));
-                                    if (text.includes('add') || text.includes('cart') || text.includes('buy') || text.includes('order')) {
-                                        const box = btn.getBoundingClientRect();
-                                        if (box.width > 0) return {x: box.x + box.width/2, y: box.y + box.height/2, found: true, text: text};
+                            # Use goal text to find relevant buttons, not hardcoded keywords
+                            _loop_js = "(goalText) => {" + """
+                                const goalWords = goalText.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2);
+                                const selectors = 'button, [role="button"], [onclick], .accordion-header, .tab, .toggle, [data-testid]';
+                                const candidates = Array.from(document.querySelectorAll(selectors));
+                                let bestMatch = null;
+                                let bestScore = 0;
+                                for (const el of candidates) {
+                                    const text = (el.textContent || '').trim().toLowerCase();
+                                    const matchCount = goalWords.filter(w => text.includes(w)).length;
+                                    if (matchCount > bestScore && el.getBoundingClientRect().width > 0) {
+                                        const box = el.getBoundingClientRect();
+                                        bestScore = matchCount;
+                                        bestMatch = {x: box.x + box.width/2, y: box.y + box.height/2, found: true, text: text, score: matchCount};
                                     }
                                 }
-                                return {found: false, all: matches};
+                                return bestMatch || {found: false};
                             }"""
-                            btn_data = await page.evaluate(_loop_js)
-                            logger.info(f"🔄 Scroll loop button search: {btn_data}")
+                            btn_data = await page.evaluate(_loop_js, goal)
                             if btn_data and btn_data.get("found"):
+                                # Scroll element into view if off-screen
+                                by = btn_data["y"]
+                                if by < 50 or by > self.config.browser.viewport_height - 50:
+                                    logger.info(f"🔄 Element at y={by:.0f} off-screen, scrolling into view")
+                                    await page.evaluate(f"window.scrollBy(0, {int(by - self.config.browser.viewport_height / 2)})")
+                                    await asyncio.sleep(0.3)
+                                    btn_data2 = await page.evaluate(_loop_js, goal)
+                                    if btn_data2 and btn_data2.get("found"):
+                                        btn_data = btn_data2
+                            if btn_data and btn_data.get("found"):
+                                logger.info(f"🔄 Scroll loop: found '{btn_data.get('text','')}' (score={btn_data.get('score',0)}) at ({btn_data['x']:.0f}, {btn_data['y']:.0f})")
                                 action_type = "click"
                                 action = {
                                     "type": "click",
@@ -1087,28 +1102,41 @@ Screenshot: {self.config.browser.viewport_width}x{self.config.browser.viewport_h
                 desc_lower = (element_description or "").lower()
                 _btn_js = "(descText) => {" + """
                     const keywords = descText.toLowerCase().split(' ').filter(k => k.length > 2);
-                    const candidates = Array.from(document.querySelectorAll('button, [onclick], [role="button"]'));
+                    // Search buttons, clickable divs, and interactive elements
+                    const selectors = 'button, [onclick], [role="button"], .accordion-header, .tab, .toggle, [class*="tab"], [class*="toggle"], [data-testid]';
+                    const candidates = Array.from(document.querySelectorAll(selectors));
                     let bestMatch = null;
                     let bestScore = 0;
                     for (const el of candidates) {
-                        const text = (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().toLowerCase();
+                        // Use short text only - first line or first 80 chars to avoid matching containers with nested content
+                        const fullText = (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().toLowerCase();
+                        const text = fullText.split(String.fromCharCode(10))[0].substring(0, 80);
                         const matchCount = keywords.filter(k => text.includes(k)).length;
                         if (matchCount > bestScore && el.getBoundingClientRect().width > 0) {
                             const box = el.getBoundingClientRect();
                             bestScore = matchCount;
-                            bestMatch = {x: box.x + box.width/2, y: box.y + box.height/2, found: true, text: text.substring(0, 50), score: matchCount};
+                            bestMatch = {x: box.x + box.width/2, y: box.y + box.height/2, found: true, text: text, score: matchCount};
                         }
                     }
                     return bestMatch || {found: false};
                 }"""
                 btn_data = await page.evaluate(_btn_js, desc_lower)
                 if btn_data and btn_data.get("found"):
-                    logger.info(f"🎯 DOM button fallback: found '{btn_data.get('text','')}' at ({btn_data['x']:.0f}, {btn_data['y']:.0f})")
-                    result = await self.action_executor.execute(
-                        ActionType.CLICK,
-                        target=(btn_data["x"], btn_data["y"]),
-                        screenshot=screenshot
-                    )
+                    # Scroll element into view if off-screen (negative y or y > viewport)
+                    by = btn_data["y"]
+                    if by < 0 or by > self.config.browser.viewport_height:
+                        logger.info(f"🎯 Element at y={by:.0f} is off-screen, scrolling into view")
+                        await page.evaluate(f"window.scrollBy(0, {by - self.config.browser.viewport_height / 2:.0f})")
+                        await asyncio.sleep(0.3)
+                        # Recalculate position after scroll
+                        btn_data = await page.evaluate(_btn_js, desc_lower)
+                    if btn_data and btn_data.get("found"):
+                        logger.info(f"🎯 DOM button fallback: found '{btn_data.get('text','')}' at ({btn_data['x']:.0f}, {btn_data['y']:.0f})")
+                        result = await self.action_executor.execute(
+                            ActionType.CLICK,
+                            target=(btn_data["x"], btn_data["y"]),
+                            screenshot=screenshot
+                        )
             
             return result
         
