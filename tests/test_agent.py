@@ -9,6 +9,7 @@ Tests cover:
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 import time
 from pathlib import Path
@@ -179,8 +180,7 @@ class TestBrowserAgentExecution:
         config.browser.headless = True
         return config
     
-    @pytest.fixture
-    async def agent(self, config):
+    @pytest_asyncio.fixture`n    async def agent(self, config):
         """Create and initialize browser agent."""
         agent = BrowserAgent(config)
         try:
@@ -289,8 +289,7 @@ class TestBrowserAgentTask:
         config.browser.headless = True
         return config
     
-    @pytest.fixture
-    async def agent(self, config):
+    @pytest_asyncio.fixture`n    async def agent(self, config):
         """Create and initialize browser agent."""
         agent = BrowserAgent(config)
         try:
