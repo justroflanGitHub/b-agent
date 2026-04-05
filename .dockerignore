@@ -12,7 +12,8 @@ build/
 .env.*
 *.md
 !requirements.txt
-docker/
+docker/docker-compose.yml
+docker/README.md
 *.log
 screenshots/
 checkpoints/
