@@ -11,6 +11,7 @@ This module provides the main BrowserAgent class that orchestrates:
 import asyncio
 import json
 import logging
+import re
 import time
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
@@ -285,6 +286,20 @@ class BrowserAgent:
                     continue
 
                 action_type = action.get("type")
+
+                # Break click loops: if 3+ consecutive clicks at same coordinates, force DOM fallback
+                if action_type in ("click", "fill_field") and len(last_actions) >= 3:
+                    recent_clicks = [a for a in last_actions[-5:] if a.get("type") in ("click", "fill_field")]
+                    if len(recent_clicks) >= 3:
+                        recent_coords = [(a.get("x", -1), a.get("y", -1)) for a in recent_clicks[-3:]]
+                        # Check if all 3 clicks are within 20px of each other
+                        if all(abs(recent_coords[i][0] - recent_coords[0][0]) < 20 and 
+                               abs(recent_coords[i][1] - recent_coords[0][1]) < 20 
+                               for i in range(1, len(recent_coords))):
+                            logger.info(f"🔄 Breaking click loop at ({recent_coords[0][0]}, {recent_coords[0][1]}) - forcing DOM fallback")
+                            # Force a scroll or different action to break the loop
+                            action_type = "scroll_down"
+                            action["type"] = "scroll_down"
 
                 # Break scroll loops: if 3+ consecutive scrolls, force a different action
                 if action_type == "scroll_down" and len(last_actions) >= 3:
@@ -654,9 +669,6 @@ Return JSON:
             response = await self.vision_client.chat_with_image(validation_prompt, screenshot)
             content = response.content
 
-            # Parse JSON
-            import json
-
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
             if json_start >= 0 and json_end > json_start:
@@ -806,9 +818,6 @@ Return JSON:
             response = await self.vision_client.chat_with_image(prompt, screenshot)
             content = response.content
 
-            # Parse JSON
-            import json
-
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
             if json_start >= 0 and json_end > json_start:
@@ -928,123 +937,174 @@ Return JSON:
         # Build context from recent actions
         action_history = ""
         if last_actions:
-            action_history = "\nRecent actions:\n"
+            action_history = "\n\n## History\n"
             for i, action in enumerate(last_actions[-5:], 1):
-                status = "success" if action.get("success") else "failed"
-                desc = action.get("description", "")
+                status = "✓" if action.get("success") else "✗"
+                desc = action.get("description", action.get("field_label", ""))
                 atype = action.get("type", "unknown")
-                action_history += f"  {i}. {atype}: {desc} ({status})\n"
+                action_history += f"{i}. {atype}: {desc} {status}\n"
 
         # Build progress context from filled_fields
         progress_ctx = ""
         if filled_fields:
-            progress_ctx = "\nAlready completed (do NOT repeat):\n"
+            progress_ctx = "\n\n## Already completed fields (do NOT fill again):\n"
             for fl, fv in filled_fields.items():
-                progress_ctx += f"  - {fl}: {fv}\n"
-            progress_ctx += "\nOnly fill fields NOT listed above.\n"
+                progress_ctx += f"- {fl}: {fv}\n"
 
-        # Build tool definitions
-        tools = [
-            {
-                "name": "fill_field",
-                "description": "Click a form field and type a value into it in one step. Use for any form input.",
-                "parameters": {
-                    "field_label": "The visible label text of the field (e.g. 'First Name', 'Email')",
-                    "field_value": "ONLY the short value to type (e.g. 'John', 'test@email.com'). NEVER the full task text.",
-                    "x": "x coordinate of the field",
-                    "y": "y coordinate of the field",
-                },
-            },
-            {
-                "name": "click",
-                "description": "Click at specific coordinates on the page",
-                "parameters": {
-                    "x": "x coordinate to click",
-                    "y": "y coordinate to click",
-                    "description": "what is being clicked",
-                },
-            },
-            {
-                "name": "type",
-                "description": "Type text into the currently focused field",
-                "parameters": {"text": "the text to type"},
-            },
-            {"name": "press_enter", "description": "Press the Enter key", "parameters": {}},
-            {"name": "scroll_down", "description": "Scroll the page down to see more content", "parameters": {}},
-            {
-                "name": "complete",
-                "description": "The task is fully finished, no more actions needed",
-                "parameters": {"result": "summary of what was accomplished"},
-            },
-        ]
+        prompt = f"""You are a GUI agent. You are given a task and your action history, with screenshots. You need to perform the next action to complete the task.
 
-        prompt = f"""[BEGIN OF TASK INSTRUCTION]
-You are a precise UI automation assistant. Analyze the screenshot and determine the NEXT SINGLE action to complete the task.
+## Output Format
+```
+Thought: ...
+Action: ...
+```
 
-Rules:
-1. For form fields, use fill_field. field_value must be ONLY the short value to type (e.g. "John"), NEVER the full task text.
-2. Gray placeholder text (like "Enter email...") means the field is EMPTY - it still needs to be filled.
-3. After a successful fill_field, proceed to the NEXT unfilled field.
-4. Do NOT interact with fields already listed as completed below.
-5. Do NOT repeat actions that already succeeded.
-6. When all tasks are done, use "complete".
-[END OF TASK INSTRUCTION]
+## Action Space
+click(point='<point>x y</point>')  # Click at pixel coordinates in the screenshot image.
+fill_field(point='<point>x y</point>', field_label='label', field_value='value')  # Click a form field and type the value.
+type(content='xxx')  # Type text into the currently focused field.
+press_enter()  # Press the Enter key.
+scroll(direction='down')  # Scroll the page down.
+finished(content='summary')  # The task is fully finished.
 
-[BEGIN OF AVAILABLE TOOLS]
-{json.dumps(tools)}
-[END OF AVAILABLE TOOLS]
+## Note
+- Write a small plan in Thought, then summarize your next action in one sentence.
+- For fill_field, field_value must be ONLY the short value to type (e.g. "John"), NEVER the full task text.
+- Do NOT repeat actions that already succeeded.
+- When all tasks are done, use finished().
+- Coordinates are absolute pixel positions in the screenshot image. (0,0) is top-left.
+- IMPORTANT: Look carefully at the screenshot and identify the EXACT pixel location of the target element. Do NOT click the center of the page or use approximate coordinates. If you are unsure of the exact location, pick the coordinates of the most likely element you can see, NOT the center of the image. Each element has a specific position — find it precisely.
 
-[BEGIN OF FORMAT INSTRUCTION]
-The output MUST be a single JSON object with a "tool_calls" array. Each entry has "name" and "arguments".
-Example:
-{{"tool_calls": [{{"name": "fill_field", "arguments": {{"field_label": "Email", "field_value": "test@test.com", "x": 400, "y": 300}}}}]}}
-Only ONE tool call per step. No other text outside the JSON.
-[END OF FORMAT INSTRUCTION]
-
-[BEGIN OF TASK]
-Task: {goal}
-Current step: {step_num + 1}
-Screenshot dimensions: {self.config.browser.viewport_width}x{self.config.browser.viewport_height}
-[END OF TASK]
-{action_history}{progress_ctx}"""
+## Task
+{goal}
+{action_history}{progress_ctx}
+"""
 
         try:
             response = await self.vision_client.chat_with_image(prompt, screenshot)
 
-            # Parse JSON from response
-            import json
+            # Parse response
+            content = response.content.strip()
 
-            content = response.content
-            json_start = content.find("{")
-            json_end = content.rfind("}") + 1
+            # Extract thought
+            thought = ""
+            thought_match = re.search(r"Thought:\s*(.+?)(?=\s*Action:|$)", content, re.DOTALL)
+            if thought_match:
+                thought = thought_match.group(1).strip()
 
-            if json_start >= 0 and json_end > json_start:
-                json_str = content[json_start:json_end]
-                try:
-                    parsed = json.loads(json_str)
-                except json.JSONDecodeError:
-                    decoder = json.JSONDecoder()
-                    parsed, _ = decoder.raw_decode(content, json_start)
+            # Extract action
+            action_str = None
+            if "Action:" in content:
+                action_str = content.split("Action:")[-1].strip()
+            elif "action:" in content.lower():
+                action_str = content.lower().split("action:")[-1].strip()
 
-                # Handle new tool_calls format: {"tool_calls": [{"name": ..., "arguments": ...}]}
-                if "tool_calls" in parsed and isinstance(parsed["tool_calls"], list) and len(parsed["tool_calls"]) > 0:
-                    tool_call = parsed["tool_calls"][0]
-                    action = {
-                        "type": tool_call.get("name", ""),
-                        "description": tool_call.get("arguments", {}).get("description", ""),
-                        **tool_call.get("arguments", {}),
-                    }
-                # Handle old format: {"type": "click", "x": 100, ...}
-                elif "type" in parsed:
-                    action = parsed
-                else:
-                    logger.warning(f"Unknown response format: {parsed}")
-                    return None
+            if not action_str:
+                # Fallback: try JSON parsing
+                json_start = content.find("{")
+                json_end = content.rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    parsed = json.loads(content[json_start:json_end])
+                    if "tool_calls" in parsed:
+                        tc = parsed["tool_calls"][0]
+                        if "name" in tc:
+                            return {"type": tc["name"], **tc.get("arguments", {})}
+                        else:
+                            for k, v in tc.items():
+                                if isinstance(v, dict):
+                                    return {"type": k, **v}
+                    elif "type" in parsed:
+                        return parsed
+                logger.warning(f"No action found in response: {content[:200]}")
+                return None
 
-                logger.info(
-                    f"Vision action: {action.get('type')} - {action.get('description', action.get('field_label', ''))}"
-                )
-                return action
+            # Parse the action string (e.g. click(start_box='(400,300)'))
+            action_match = re.match(r"(\w+)\((.+)\)$", action_str, re.DOTALL)
+            if not action_match:
+                logger.warning(f"Cannot parse action: {action_str}")
+                return None
+
+            action_type = action_match.group(1).lower()
+            args_str = action_match.group(2)
+
+            # Map action types
+            type_map = {
+                "left_single": "click",
+                "left_double": "click",
+                "right_single": "click",
+                "finished": "complete",
+            }
+            action_type = type_map.get(action_type, action_type)
+
+            # Parse keyword arguments
+            action = {"type": action_type}
+
+            # Parse coordinates from action arguments
+            # Native UI-TARS format: point='<point>x y</point>'
+            # Fallback format: start_box='(x,y)' or point='(x,y)'
+            point_match = re.search(r'<point>(\d+)\s+(\d+)</point>', args_str)
+            coord_match = None
+            if point_match:
+                raw_x, raw_y = float(point_match.group(1)), float(point_match.group(2))
+            else:
+                # Fallback: parse (x,y) format
+                clean_args = re.sub(r'<\|[^>]*\|>', '', args_str)
+                coord_match = re.search(r'(?:start_box|point)\s*=\s*[\'\"]?\((\d+)\s*,\s*(\d+)\)[\'\"]?', clean_args)
+                if coord_match:
+                    raw_x, raw_y = float(coord_match.group(1)), float(coord_match.group(2))
+
+            if point_match or coord_match:
+                # Coordinates are in the resized image pixel space.
+                # Scale from resized image to viewport.
+                import math
+                def smart_resize(h, w, factor=28, min_pixels=78400, max_pixels=12845056):
+                    h_bar = max(factor, round(h / factor) * factor)
+                    w_bar = max(factor, round(w / factor) * factor)
+                    if h_bar * w_bar > max_pixels:
+                        beta = math.sqrt((h * w) / max_pixels)
+                        h_bar = math.floor(h / beta / factor) * factor
+                        w_bar = math.floor(w / beta / factor) * factor
+                    elif h_bar * w_bar < min_pixels:
+                        beta = math.sqrt(min_pixels / (h * w))
+                        h_bar = math.ceil(h * beta / factor) * factor
+                        w_bar = math.ceil(w * beta / factor) * factor
+                    return h_bar, w_bar
+
+                rh, rw = smart_resize(self.config.browser.viewport_height, self.config.browser.viewport_width)
+                screen_x = int(raw_x / rw * self.config.browser.viewport_width)
+                screen_y = int(raw_y / rh * self.config.browser.viewport_height) - 95
+                # Clamp to viewport bounds
+                screen_y = max(0, screen_y)
+                action["x"] = screen_x
+                action["y"] = screen_y
+            # Parse other arguments
+            # field_label
+            fl_match = re.search(r"field_label\s*=\s*['\"]([^'\"]+)['\"]", args_str)
+            if fl_match:
+                action["field_label"] = fl_match.group(1)
+
+            # field_value
+            fv_match = re.search(r"field_value\s*=\s*['\"]([^'\"]+)['\"]", args_str)
+            if fv_match:
+                action["field_value"] = fv_match.group(1)
+
+            # content
+            ct_match = re.search(r"content\s*=\s*['\"]([^'\"]+)['\"]", args_str)
+            if ct_match:
+                action["content"] = ct_match.group(1)
+                if action_type == "type":
+                    action["text"] = ct_match.group(1)
+                elif action_type == "complete":
+                    action["result"] = ct_match.group(1)
+
+            # description from thought
+            action["description"] = thought[:100] if thought else ""
+
+            logger.info(
+                f"Vision action: {action.get('type')} - {action.get('description', action.get('field_label', ''))}"
+                + (f" coords=({action.get('x')}, {action.get('y')})" if 'x' in action else "")
+            )
+            return action
 
         except Exception as e:
             logger.error(f"Failed to get vision action: {e}")
@@ -1056,53 +1116,50 @@ Screenshot dimensions: {self.config.browser.viewport_width}x{self.config.browser
         action_type = action.get("type")
 
         if action_type == "click":
-            # Use the coordinate tool to get precise coordinates
+            # Use coordinates directly from the model (native UI-TARS grounding)
+            x = action.get("x", 0)
+            y = action.get("y", 0)
             element_description = action.get("description", "click target")
-            viewport = await self.browser.page.evaluate("({width: window.innerWidth, height: window.innerHeight})")
 
-            coords = await self.vision_client.get_click_coordinates(
-                screenshot=screenshot,
-                element_description=element_description,
-                viewport_width=viewport.get("width", 2560),
-                viewport_height=viewport.get("height", 1440),
-            )
-
-            x = coords.get("x", 0)
-            y = coords.get("y", 0)
-            confidence = coords.get("confidence", 0)
-
-            if confidence < 0.5 or not coords.get("element_found", False):
-                # Fallback to original coordinates from main prompt
-                x = action.get("x", x)
-                y = action.get("y", y)
-                logger.warning(f"⚠️ Coordinate tool low confidence ({confidence}), using fallback: ({x}, {y})")
-
-            logger.info(f"🎯 Final click coordinates: ({x}, {y}) for '{element_description}'")
+            logger.info(f"🎯 Model-grounded click coordinates: ({x}, {y}) for '{element_description}'")
             result = await self.action_executor.execute(ActionType.CLICK, target=(x, y), screenshot=screenshot)
 
-            # DOM fallback: if coordinate click didn't focus an input, try CSS selector
+            # DOM fallback: if coordinate click didn't focus an input, find nearest input field
             if result.success:
                 page = self.browser.page
                 if page:
                     focused = await page.evaluate("() => document.activeElement?.tagName")
-                    if focused in ("BODY", "HTML", None):
-                        logger.info("🔄 Coordinate click missed input, trying DOM fallback...")
-                        desc_lower = element_description.lower()
-                        # Try to find a visible text input/search field
-                        selector = None
-                        if any(k in desc_lower for k in ["search", "input", "field", "text", "box", "type"]):
-                            selector = "input[type='text']:not([hidden]), input:not([type]):not([hidden]), textarea:not([hidden]), input[role='combobox']"
-                        if selector:
-                            el = await page.query_selector(selector)
-                            if el:
-                                box = await el.bounding_box()
-                                if box:
-                                    cx = box["x"] + box["width"] / 2
-                                    cy = box["y"] + box["height"] / 2
-                                    logger.info(f"🎯 DOM fallback click at ({cx}, {cy})")
-                                    result = await self.action_executor.execute(
-                                        ActionType.CLICK, target=(cx, cy), screenshot=screenshot
-                                    )
+                    if focused not in ("INPUT", "TEXTAREA", "SELECT"):
+                        logger.info("🔄 Coordinate click didn't focus any element, searching for nearby input...")
+                        # Find the closest visible input/textarea to the click coordinates
+                        nearest = await page.evaluate("""
+                        ([clickX, clickY]) => {
+                            const inputs = Array.from(document.querySelectorAll("input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='checkbox']):not([type='radio']), textarea, select"));
+                            let closest = null;
+                            let minDist = Infinity;
+                            for (const el of inputs) {
+                                const box = el.getBoundingClientRect();
+                                if (box.width === 0 || box.height === 0) continue;
+                                const cx = box.x + box.width / 2;
+                                const cy = box.y + box.height / 2;
+                                const dist = Math.sqrt((cx - clickX) ** 2 + (cy - clickY) ** 2);
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    closest = {x: cx, y: cy, dist: dist, tag: el.tagName, id: el.id, placeholder: el.placeholder};
+                                }
+                            }
+                            return closest;
+                        }
+                        """, [x, y])
+                        if nearest and nearest["dist"] < 300:
+                            logger.info(
+                                f"🎯 DOM fallback: nearest input '{nearest.get('tag')}' at ({nearest['x']:.0f}, {nearest['y']:.0f}), dist={nearest['dist']:.0f}px"
+                            )
+                            result = await self.action_executor.execute(
+                                ActionType.CLICK, target=(nearest["x"], nearest["y"]), screenshot=screenshot
+                            )
+                        else:
+                            logger.info(f"🔄 No nearby input found (nearest: {nearest})")
 
             # DOM button/link fallback: if click didn't seem to work, try finding button by text
             if result.success and page:
@@ -1226,12 +1283,42 @@ Screenshot dimensions: {self.config.browser.viewport_width}x{self.config.browser
                     action_type=ActionType.TYPE_TEXT,
                     error="text too long, looks like instructions not a value",
                 )
+            # Auto-focus: if no input is focused, find and click the nearest one
+            page = self.browser.page
+            if page:
+                focused = await page.evaluate("() => document.activeElement?.tagName")
+                if focused not in ("INPUT", "TEXTAREA", "SELECT"):
+                    logger.info("🔄 No input focused for type action, clicking first visible input...")
+                    _first_input_js = "() => {" + """
+                        const el = document.querySelector("input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='checkbox']):not([type='radio']):not([hidden]), textarea:not([hidden])");
+                        if (el) {
+                            const box = el.getBoundingClientRect();
+                            if (box.width > 0 && box.height > 0) {
+                                return {x: box.x + box.width/2, y: box.y + box.height/2, tag: el.tagName, id: el.id, placeholder: el.placeholder};
+                            }
+                        }
+                        return null;
+                    """ + "}"
+                    input_info = await page.evaluate(_first_input_js)
+                    if input_info:
+                        logger.info(f"🎯 Auto-focusing input '{input_info.get('tag')}' at ({input_info['x']:.0f}, {input_info['y']:.0f})")
+                        await self.action_executor.execute(ActionType.CLICK, target=(input_info["x"], input_info["y"]))
+                        await asyncio.sleep(0.3)
+                        # Double-check focus, force it via JS if needed
+                        focused2 = await page.evaluate("() => document.activeElement?.tagName")
+                        if focused2 not in ("INPUT", "TEXTAREA", "SELECT"):
+                            logger.info("🎯 Click didn't focus input, forcing focus via JS...")
+                            await page.evaluate("""() => {
+                                const el = document.querySelector("input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='checkbox']):not([type='radio']):not([hidden]), textarea:not([hidden])");
+                                if (el) el.focus();
+                            }""")
+                            await asyncio.sleep(0.2)
             return await self.action_executor.execute(ActionType.TYPE_TEXT, value=text, screenshot=screenshot)
 
         elif action_type == "press_enter":
             return await self.action_executor.execute(ActionType.PRESS_KEY, value="Enter", screenshot=screenshot)
 
-        elif action_type == "scroll_down":
+        elif action_type == "scroll_down" or action_type == "scroll":
             return await self.action_executor.execute(ActionType.SCROLL_DOWN, screenshot=screenshot)
 
         else:

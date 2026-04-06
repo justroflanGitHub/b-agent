@@ -8,6 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Tests: 573 passed](https://img.shields.io/badge/tests-573%20passed-brightgreen.svg)](tests/)
+[![Integration: 19/20 vision](https://img.shields.io/badge/integration-19%2F20%20vision-brightgreen.svg)](tests/)
 
 **A production-ready, modular browser automation framework that sees and understands web pages like a human.**
 
@@ -462,9 +463,8 @@ pytest tests/test_agent.py -v
 | Category | Count |
 |----------|-------|
 | Unit Tests | 573 |
-| Integration Tests | 20 |
+| Integration Tests | 20 (19/20 passing with UI-TARS vision) |
 | Test Pages | 7 |
-| Coverage | ~85% |
 
 ---
 
