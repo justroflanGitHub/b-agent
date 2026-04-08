@@ -42,10 +42,15 @@ class ChatMessage:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to API format."""
-        msg = {"role": self.role.value, "content": self.content}
         if self.images:
-            msg["images"] = self.images
-        return msg
+            content_parts = [{"type": "text", "text": self.content}]
+            for img in self.images:
+                content_parts.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{img}"}
+                })
+            return {"role": self.role.value, "content": content_parts}
+        return {"role": self.role.value, "content": self.content}
 
 
 @dataclass
@@ -282,7 +287,12 @@ class LLMClient:
                     raise Exception("No choices in response")
 
                 choice = data["choices"][0]
-                content = choice.get("message", {}).get("content", "")
+                msg = choice.get("message", {})
+                content = msg.get("content", "")
+                # GLM models put thinking in reasoning_content, final answer in content
+                # If content is empty but reasoning_content exists, use reasoning_content
+                if not content:
+                    content = msg.get("reasoning_content", "")
 
                 self._request_count += 1
                 self._total_latency += latency

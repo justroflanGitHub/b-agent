@@ -985,6 +985,8 @@ finished(content='summary')  # The task is fully finished.
 
             # Parse response
             content = response.content.strip()
+            # Remove invisible unicode chars (zero-width spaces etc) that models may add
+            content = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u200b-\u200f\ufeff\u00a0]', '', content)
 
             # Extract thought
             thought = ""
@@ -1019,6 +1021,11 @@ finished(content='summary')  # The task is fully finished.
                 return None
 
             # Parse the action string (e.g. click(start_box='(400,300)'))
+            # Strip backticks that GLM models add around actions
+            action_str = action_str.strip('`').strip()
+            # Remove zero-width spaces and other invisible unicode that GLM adds
+            action_str = re.sub(r'[\x00-\x1f\x7f-\x9f\u200b-\u200f\ufeff\u00a0]', '', action_str)
+            logger.info(f"🔍 Parsed action_str: {repr(action_str)}")
             action_match = re.match(r"(\w+)\((.+)\)$", action_str, re.DOTALL)
             if not action_match:
                 logger.warning(f"Cannot parse action: {action_str}")
@@ -1040,20 +1047,29 @@ finished(content='summary')  # The task is fully finished.
             action = {"type": action_type}
 
             # Parse coordinates from action arguments
-            # Native UI-TARS format: point='<point>x y</point>'
-            # Fallback format: start_box='(x,y)' or point='(x,y)'
+            # Format 1: UI-TARS <point>x y</point>
+            # Format 2: GLM bbox [x1, y1, x2, y2] → center point
+            # Format 3: start_box='(x,y)' or point='(x,y)'
             point_match = re.search(r'<point>(\d+)\s+(\d+)</point>', args_str)
             coord_match = None
+            bbox_match = None
             if point_match:
                 raw_x, raw_y = float(point_match.group(1)), float(point_match.group(2))
             else:
-                # Fallback: parse (x,y) format
-                clean_args = re.sub(r'<\|[^>]*\|>', '', args_str)
-                coord_match = re.search(r'(?:start_box|point)\s*=\s*[\'\"]?\((\d+)\s*,\s*(\d+)\)[\'\"]?', clean_args)
-                if coord_match:
-                    raw_x, raw_y = float(coord_match.group(1)), float(coord_match.group(2))
+                # Try GLM bbox format: [x1, y1, x2, y2]
+                bbox_match = re.search(r'(?:point|start_box)\s*=\s*[\'\"]?\[(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\][\'\"]?', args_str)
+                if bbox_match:
+                    x1, y1, x2, y2 = float(bbox_match.group(1)), float(bbox_match.group(2)), float(bbox_match.group(3)), float(bbox_match.group(4))
+                    raw_x = (x1 + x2) / 2  # center of bbox
+                    raw_y = (y1 + y2) / 2
+                else:
+                    # Fallback: parse (x,y) format
+                    clean_args = re.sub(r'<\|[^>]*\|>', '', args_str)
+                    coord_match = re.search(r'(?:start_box|point)\s*=\s*[\'\"]?\((\d+)\s*,\s*(\d+)\)[\'\"]?', clean_args)
+                    if coord_match:
+                        raw_x, raw_y = float(coord_match.group(1)), float(coord_match.group(2))
 
-            if point_match or coord_match:
+            if point_match or coord_match or bbox_match:
                 # Coordinates are in the resized image pixel space.
                 # Scale from resized image to viewport.
                 import math
